@@ -1,4 +1,8 @@
 
+import { Database } from "@/integrations/supabase/types";
+
+export type Tables = Database['public']['Tables'];
+
 export interface Profile {
   id: string;
   full_name: string | null;
