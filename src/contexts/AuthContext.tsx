@@ -59,10 +59,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (error) throw error;
       
       if (data.user) {
-        // Create profile entry
+        // Directly insert into users table
+        const { error: userError } = await supabase
+          .from('users')
+          .insert({
+            id: data.user.id,
+            email: email,
+            full_name: fullName,
+            updated_at: new Date().toISOString(),
+            created_at: new Date().toISOString(),
+          });
+          
+        if (userError) {
+          console.error('Error creating user record:', userError);
+          throw userError;
+        }
+        
+        // Also insert into profiles table for consistency
         const { error: profileError } = await supabase
           .from('profiles')
-          .upsert({
+          .insert({
             id: data.user.id,
             full_name: fullName,
             email: email,
@@ -71,20 +87,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           
         if (profileError) {
           console.error('Error creating profile:', profileError);
-        }
-        
-        // Create user entry
-        const { error: userError } = await supabase
-          .from('users')
-          .upsert({
-            id: data.user.id,
-            email: email,
-            full_name: fullName,
-            updated_at: new Date().toISOString(),
-          });
-          
-        if (userError) {
-          console.error('Error creating user record:', userError);
         }
       }
       

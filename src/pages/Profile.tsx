@@ -15,6 +15,7 @@ interface UserProfile {
   email: string;
   full_name: string | null;
   avatar_url: string | null;
+  location?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -32,6 +33,7 @@ const Profile = () => {
       
       try {
         setLoading(true);
+        // First try to get from the users table
         const { data, error } = await supabase
           .from("users")
           .select("*")
@@ -39,7 +41,7 @@ const Profile = () => {
           .single();
 
         if (error) {
-          console.error('Error fetching profile:', error);
+          console.error('Error fetching user data:', error);
           toast({
             title: "Error fetching profile",
             description: error.message,
@@ -48,7 +50,26 @@ const Profile = () => {
           return;
         }
 
+        // Successfully fetched user data
         setProfile(data as UserProfile);
+        
+        // Optionally, try to get location from profiles table if it exists
+        try {
+          const { data: profileData, error: profileError } = await supabase
+            .from("profiles")
+            .select("location")
+            .eq("id", user.id)
+            .single();
+            
+          if (!profileError && profileData && profileData.location) {
+            setProfile(prev => prev ? {
+              ...prev,
+              location: profileData.location
+            } : null);
+          }
+        } catch (profileError) {
+          console.log("Could not fetch location from profile, ignoring");
+        }
       } catch (error: any) {
         console.error('Error:', error.message);
       } finally {
@@ -108,6 +129,9 @@ const Profile = () => {
             </Avatar>
             <h2 className="text-2xl font-bold mt-4">{profile?.full_name || 'User'}</h2>
             <p className="text-gray-500 mt-1">{profile?.email}</p>
+            {profile?.location && (
+              <p className="text-gray-500 mt-1">{profile.location}</p>
+            )}
           </>
         )}
 
@@ -129,6 +153,12 @@ const Profile = () => {
                   <span className="text-gray-500">Full Name</span>
                   <span>{profile?.full_name || 'Not set'}</span>
                 </div>
+                {profile?.location && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Location</span>
+                    <span>{profile.location}</span>
+                  </div>
+                )}
                 <div className="flex justify-between">
                   <span className="text-gray-500">Joined</span>
                   <span>{profile?.created_at ? new Date(profile.created_at).toLocaleDateString() : 'Unknown'}</span>

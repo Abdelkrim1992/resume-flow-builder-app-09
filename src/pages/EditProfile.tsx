@@ -38,78 +38,55 @@ const EditProfile = () => {
       
       try {
         setLoading(true);
-        // First try to get from the profiles table
-        let { data: profileData, error: profileError } = await supabase
-          .from("profiles")
+        // First try to get from the users table
+        let { data: userData, error: userError } = await supabase
+          .from("users")
           .select("*")
           .eq("id", user.id)
           .single();
 
-        if (profileError) {
-          // If no profile found, try the users table
-          const { data: userData, error: userError } = await supabase
-            .from("users")
-            .select("*")
+        if (userError) {
+          console.error('Error fetching user data:', userError);
+          toast({
+            title: "Error fetching profile",
+            description: userError.message,
+            variant: "destructive"
+          });
+          return;
+        }
+
+        // Set initial data from users table
+        setProfile(userData as UserProfile);
+        
+        setFormData({
+          full_name: userData.full_name || "",
+          location: "", // Will be populated from profiles table if available
+          avatar_url: userData.avatar_url || "",
+        });
+        
+        // Try to get location from profiles table
+        try {
+          const { data: profileData, error: profileError } = await supabase
+            .from("profiles")
+            .select("location")
             .eq("id", user.id)
             .single();
-
-          if (userError) {
-            console.error('Error fetching user data:', userError);
-            toast({
-              title: "Error fetching profile",
-              description: userError.message,
-              variant: "destructive"
-            });
-            return;
+            
+          if (!profileError && profileData) {
+            // Update form data with location from profiles
+            setFormData(prev => ({
+              ...prev,
+              location: profileData.location || ""
+            }));
+            
+            // Update profile with location
+            setProfile(prev => prev ? {
+              ...prev,
+              location: profileData.location
+            } : null);
           }
-
-          // Convert user data to expected profile format
-          setProfile({
-            ...userData,
-            location: null, // Users table doesn't have location
-          } as UserProfile);
-          
-          setFormData({
-            full_name: userData.full_name || "",
-            location: "", // Set default empty location
-            avatar_url: userData.avatar_url || "",
-          });
-        } else {
-          // Create a combined profile with data from both sources if needed
-          const combinedProfile: UserProfile = {
-            id: profileData.id,
-            email: user.email || '',
-            full_name: profileData.full_name,
-            avatar_url: null, // This may come from users table
-            location: profileData.location,
-            created_at: profileData.created_at,
-            updated_at: profileData.updated_at
-          };
-          
-          setProfile(combinedProfile);
-          setFormData({
-            full_name: profileData.full_name || "",
-            location: profileData.location || "",
-            avatar_url: "", // This will be updated if we find it in users table
-          });
-          
-          // Try to get avatar_url from users table
-          try {
-            const { data: userData } = await supabase
-              .from("users")
-              .select("avatar_url")
-              .eq("id", user.id)
-              .single();
-              
-            if (userData && userData.avatar_url) {
-              setFormData(prev => ({
-                ...prev,
-                avatar_url: userData.avatar_url || ""
-              }));
-            }
-          } catch (error) {
-            console.log("Could not fetch avatar, ignoring:", error);
-          }
+        } catch (error) {
+          console.log("Could not fetch location from profile, ignoring:", error);
         }
       } catch (error: any) {
         console.error('Error:', error.message);
@@ -143,6 +120,7 @@ const EditProfile = () => {
         .upsert({
           id: user.id,
           full_name: formData.full_name,
+          email: user.email || '',
           location: formData.location,
           updated_at: new Date().toISOString()
         });
