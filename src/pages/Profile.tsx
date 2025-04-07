@@ -8,9 +8,16 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { Tables } from "@/types/supabase";
 
-interface UserProfile extends Tables['users'] {}
+// Define our own UserProfile interface instead of extending Tables
+interface UserProfile {
+  id: string;
+  email: string;
+  full_name: string | null;
+  avatar_url: string | null;
+  created_at: string;
+  updated_at: string;
+}
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -26,9 +33,9 @@ const Profile = () => {
       try {
         setLoading(true);
         const { data, error } = await supabase
-          .from('users')
-          .select('*')
-          .eq('id', user.id)
+          .from("users")
+          .select("*")
+          .eq("id", user.id)
           .single();
 
         if (error) {
@@ -41,7 +48,7 @@ const Profile = () => {
           return;
         }
 
-        setProfile(data);
+        setProfile(data as UserProfile);
       } catch (error: any) {
         console.error('Error:', error.message);
       } finally {
