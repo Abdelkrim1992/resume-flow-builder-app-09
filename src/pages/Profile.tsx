@@ -140,7 +140,7 @@ const Profile = () => {
           <Button
             variant="outline"
             className="w-full flex items-center justify-center gap-2 border-dashed border-gray-300"
-            onClick={() => navigate('/settings')}
+            onClick={() => navigate('/edit-profile')}
           >
             <User size={16} />
             <span>Edit Profile</span>
