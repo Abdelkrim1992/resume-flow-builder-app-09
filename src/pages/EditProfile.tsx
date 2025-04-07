@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 
 interface UserProfile {
@@ -40,28 +39,45 @@ const EditProfile = () => {
       
       try {
         setLoading(true);
-        const { data, error } = await supabase
-          .from("users")
+        // First try to get from the profiles table
+        let { data: profileData, error: profileError } = await supabase
+          .from("profiles")
           .select("*")
           .eq("id", user.id)
           .single();
 
-        if (error) {
-          console.error('Error fetching profile:', error);
-          toast({
-            title: "Error fetching profile",
-            description: error.message,
-            variant: "destructive"
-          });
-          return;
-        }
+        if (profileError) {
+          // If no profile found, try the users table
+          const { data: userData, error: userError } = await supabase
+            .from("users")
+            .select("*")
+            .eq("id", user.id)
+            .single();
 
-        setProfile(data as UserProfile);
-        setFormData({
-          full_name: data.full_name || "",
-          location: data.location || "",
-          avatar_url: data.avatar_url || "",
-        });
+          if (userError) {
+            console.error('Error fetching user data:', userError);
+            toast({
+              title: "Error fetching profile",
+              description: userError.message,
+              variant: "destructive"
+            });
+            return;
+          }
+
+          setProfile(userData as UserProfile);
+          setFormData({
+            full_name: userData.full_name || "",
+            location: userData.location || "",
+            avatar_url: userData.avatar_url || "",
+          });
+        } else {
+          setProfile(profileData as UserProfile);
+          setFormData({
+            full_name: profileData.full_name || "",
+            location: profileData.location || "",
+            avatar_url: profileData.avatar_url || "",
+          });
+        }
       } catch (error: any) {
         console.error('Error:', error.message);
       } finally {
@@ -88,18 +104,32 @@ const EditProfile = () => {
     try {
       setSaving(true);
       
-      const { error } = await supabase
-        .from("users")
-        .update({
+      // Try to update the profiles table first
+      const { error: profileError } = await supabase
+        .from("profiles")
+        .upsert({
+          id: user.id,
           full_name: formData.full_name,
           location: formData.location,
+          updated_at: new Date().toISOString()
+        });
+      
+      if (profileError) {
+        console.error('Error updating profile:', profileError);
+      }
+
+      // Also update the users table
+      const { error: userError } = await supabase
+        .from("users")
+        .upsert({
+          id: user.id,
+          full_name: formData.full_name,
           avatar_url: formData.avatar_url,
           updated_at: new Date().toISOString()
-        })
-        .eq("id", user.id);
+        });
       
-      if (error) {
-        throw error;
+      if (userError) {
+        throw userError;
       }
       
       toast({

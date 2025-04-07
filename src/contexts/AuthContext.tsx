@@ -45,7 +45,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signUp = async (email: string, password: string, fullName: string) => {
     try {
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -57,6 +57,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
 
       if (error) throw error;
+      
+      if (data.user) {
+        // Create profile entry
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .upsert({
+            id: data.user.id,
+            full_name: fullName,
+            email: email,
+            updated_at: new Date().toISOString(),
+          });
+          
+        if (profileError) {
+          console.error('Error creating profile:', profileError);
+        }
+        
+        // Create user entry
+        const { error: userError } = await supabase
+          .from('users')
+          .upsert({
+            id: data.user.id,
+            email: email,
+            full_name: fullName,
+            updated_at: new Date().toISOString(),
+          });
+          
+        if (userError) {
+          console.error('Error creating user record:', userError);
+        }
+      }
       
       toast({
         title: "Account created successfully!",
