@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Save } from "lucide-react";
@@ -67,12 +66,12 @@ const EditProfile = () => {
           // Convert user data to expected profile format
           setProfile({
             ...userData,
-            location: userData.location || null,
+            location: null, // Users table doesn't have location
           } as UserProfile);
           
           setFormData({
             full_name: userData.full_name || "",
-            location: userData.location || "",
+            location: "", // Set default empty location
             avatar_url: userData.avatar_url || "",
           });
         } else {
