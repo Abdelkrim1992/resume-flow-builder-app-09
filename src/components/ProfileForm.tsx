@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -94,6 +95,7 @@ const ProfileForm = () => {
       // Also update users table to keep data in sync
       const { error: userError } = await supabase.from('users').upsert({
         id: user?.id,
+        email: user?.email || '',
         full_name: profile.full_name,
         updated_at: new Date().toISOString(),
       });

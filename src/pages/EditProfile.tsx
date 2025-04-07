@@ -15,7 +15,7 @@ interface UserProfile {
   email: string;
   full_name: string | null;
   avatar_url: string | null;
-  location: string | null;
+  location?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -64,19 +64,53 @@ const EditProfile = () => {
             return;
           }
 
-          setProfile(userData as UserProfile);
+          // Convert user data to expected profile format
+          setProfile({
+            ...userData,
+            location: userData.location || null,
+          } as UserProfile);
+          
           setFormData({
             full_name: userData.full_name || "",
             location: userData.location || "",
             avatar_url: userData.avatar_url || "",
           });
         } else {
-          setProfile(profileData as UserProfile);
+          // Create a combined profile with data from both sources if needed
+          const combinedProfile: UserProfile = {
+            id: profileData.id,
+            email: user.email || '',
+            full_name: profileData.full_name,
+            avatar_url: null, // This may come from users table
+            location: profileData.location,
+            created_at: profileData.created_at,
+            updated_at: profileData.updated_at
+          };
+          
+          setProfile(combinedProfile);
           setFormData({
             full_name: profileData.full_name || "",
             location: profileData.location || "",
-            avatar_url: profileData.avatar_url || "",
+            avatar_url: "", // This will be updated if we find it in users table
           });
+          
+          // Try to get avatar_url from users table
+          try {
+            const { data: userData } = await supabase
+              .from("users")
+              .select("avatar_url")
+              .eq("id", user.id)
+              .single();
+              
+            if (userData && userData.avatar_url) {
+              setFormData(prev => ({
+                ...prev,
+                avatar_url: userData.avatar_url || ""
+              }));
+            }
+          } catch (error) {
+            console.log("Could not fetch avatar, ignoring:", error);
+          }
         }
       } catch (error: any) {
         console.error('Error:', error.message);
@@ -123,6 +157,7 @@ const EditProfile = () => {
         .from("users")
         .upsert({
           id: user.id,
+          email: user.email || '',
           full_name: formData.full_name,
           avatar_url: formData.avatar_url,
           updated_at: new Date().toISOString()
