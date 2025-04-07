@@ -52,6 +52,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           data: {
             full_name: fullName,
           },
+          emailRedirectTo: `${window.location.origin}/home`,
         },
       });
 
@@ -59,7 +60,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       toast({
         title: "Account created successfully!",
-        description: "Please check your email for verification.",
+        description: "You can now sign in with your credentials.",
       });
       
       navigate('/login');
