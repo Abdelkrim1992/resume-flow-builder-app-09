@@ -33,6 +33,7 @@ const Profile = () => {
       
       try {
         setLoading(true);
+        
         // First try to get from the users table
         const { data, error } = await supabase
           .from("users")
@@ -42,11 +43,24 @@ const Profile = () => {
 
         if (error) {
           console.error('Error fetching user data:', error);
-          toast({
-            title: "Error fetching profile",
-            description: error.message,
-            variant: "destructive"
-          });
+          // If no data in users table, try to construct from auth user
+          if (error.code === 'PGRST116') {
+            setProfile({
+              id: user.id,
+              email: user.email || '',
+              full_name: user.user_metadata?.full_name || null,
+              avatar_url: null,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            });
+          } else {
+            toast({
+              title: "Error fetching profile",
+              description: error.message,
+              variant: "destructive"
+            });
+          }
+          setLoading(false);
           return;
         }
 

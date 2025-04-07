@@ -1,4 +1,3 @@
-
 import { createContext, useState, useEffect, useContext, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -59,34 +58,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (error) throw error;
       
       if (data.user) {
-        // Directly insert into users table
-        const { error: userError } = await supabase
-          .from('users')
-          .insert({
-            id: data.user.id,
-            email: email,
-            full_name: fullName,
-            updated_at: new Date().toISOString(),
-            created_at: new Date().toISOString(),
-          });
-          
-        if (userError) {
-          console.error('Error creating user record:', userError);
-          throw userError;
-        }
-        
-        // Also insert into profiles table for consistency
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .insert({
-            id: data.user.id,
-            full_name: fullName,
-            email: email,
-            updated_at: new Date().toISOString(),
-          });
-          
-        if (profileError) {
-          console.error('Error creating profile:', profileError);
+        try {
+          // Try to insert into users table
+          const { error: userError } = await supabase
+            .from('users')
+            .upsert({
+              id: data.user.id,
+              email: email,
+              full_name: fullName,
+              updated_at: new Date().toISOString(),
+              created_at: new Date().toISOString(),
+            });
+            
+          if (userError) {
+            console.error('Error creating user record:', userError);
+            // Don't throw here, as the auth record was created successfully
+            toast({
+              title: "Warning",
+              description: "User created but profile data could not be saved. Please update your profile later.",
+              variant: "destructive"
+            });
+          }
+        } catch (profileError) {
+          console.error('Error saving profile data:', profileError);
+          // Continue anyway since auth user was created
         }
       }
       
