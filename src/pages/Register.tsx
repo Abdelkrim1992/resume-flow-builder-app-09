@@ -5,13 +5,14 @@ import { ArrowLeft, Eye, EyeOff, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useToast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Register = () => {
   const navigate = useNavigate();
-  const { toast } = useToast();
+  const { signUp } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -66,19 +67,16 @@ const Register = () => {
     return valid;
   };
   
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (validateForm()) {
-      toast({
-        title: "Account created!",
-        description: "Redirecting to login...",
-      });
-      
-      // Simulate loading
-      setTimeout(() => {
-        navigate("/login");
-      }, 1500);
+      setLoading(true);
+      try {
+        await signUp(formData.email, formData.password, formData.name);
+      } finally {
+        setLoading(false);
+      }
     }
   };
   
@@ -117,6 +115,7 @@ const Register = () => {
                 value={formData.name}
                 onChange={handleChange}
                 className={errors.name ? "border-red-500" : ""}
+                disabled={loading}
               />
               {errors.name && <p className="text-red-500 text-sm">{errors.name}</p>}
             </div>
@@ -131,6 +130,7 @@ const Register = () => {
                 value={formData.email}
                 onChange={handleChange}
                 className={errors.email ? "border-red-500" : ""}
+                disabled={loading}
               />
               {errors.email && <p className="text-red-500 text-sm">{errors.email}</p>}
             </div>
@@ -146,11 +146,13 @@ const Register = () => {
                   value={formData.password}
                   onChange={handleChange}
                   className={errors.password ? "border-red-500 pr-10" : "pr-10"}
+                  disabled={loading}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500"
+                  disabled={loading}
                 >
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
@@ -159,8 +161,12 @@ const Register = () => {
             </div>
             
             <div className="pt-4">
-              <Button type="submit" className="w-full resume-gradient py-5">
-                Sign Up
+              <Button 
+                type="submit" 
+                className="w-full resume-gradient py-5"
+                disabled={loading}
+              >
+                {loading ? "Creating Account..." : "Sign Up"}
               </Button>
             </div>
             

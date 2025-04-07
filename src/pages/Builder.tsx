@@ -1,11 +1,8 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { 
   ChevronLeft, 
-  MoreVertical, 
-  ChevronDown, 
-  X,
+  MoreVertical,
   Check
 } from "lucide-react";
 import { 
@@ -19,6 +16,13 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
+import { createResume, getResumeById, updateResume } from "@/services/resumeService";
+import ExperienceList from "@/components/resume/ExperienceList";
+import EducationList from "@/components/resume/EducationList";
+import SkillList from "@/components/resume/SkillList";
+import { supabase } from '@/integrations/supabase/client';
 
 interface FormSection {
   id: string;
@@ -30,16 +34,19 @@ interface FormSection {
 
 const Builder = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const { toast } = useToast();
+  
+  const [activeResumeId, setActiveResumeId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
   
   const [formData, setFormData] = useState({
-    fullName: "Harry Maguire Johnson",
-    email: "Harrymaguire@gmail.com",
-    location: "Jakarta, Indonesia",
-    birthDay: "24",
-    birthMonth: "05",
-    birthYear: "1999",
+    title: "My Resume",
+    fullName: "",
+    email: "",
+    location: "",
     summary: "",
-    experience: []
   });
   
   const [sections, setSections] = useState<FormSection[]>([
@@ -53,14 +60,14 @@ const Builder = () => {
     {
       id: "summary",
       title: "Summary",
-      subtitle: "Enter a brief description of your professional background, you can choose specific skills",
+      subtitle: "Enter a brief description of your professional background",
       expanded: false,
       completed: false
     },
     {
       id: "experience",
       title: "Experience",
-      subtitle: "Enter details about what you did in your previous jobs. Start with your responsibilities",
+      subtitle: "Enter details about what you did in your previous jobs",
       expanded: false,
       completed: false
     },
@@ -70,8 +77,60 @@ const Builder = () => {
       subtitle: "Enter your educational background, starting with the most recent",
       expanded: false,
       completed: false
+    },
+    {
+      id: "skills",
+      title: "Skills",
+      subtitle: "Add relevant skills that showcase your abilities",
+      expanded: false,
+      completed: false
     }
   ]);
+
+  useEffect(() => {
+    if (user) {
+      initializeResume();
+    }
+  }, [user]);
+  
+  const initializeResume = async () => {
+    if (!user) return;
+    
+    try {
+      setLoading(true);
+      
+      // For simplicity, we're creating a new resume each time.
+      // In a real app, you'd fetch existing resumes and let the user select one.
+      const resumeData = await createResume("My Resume", user.id);
+      setActiveResumeId(resumeData.id);
+      
+      // Load user profile data
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+      
+      if (profileData) {
+        setFormData(prev => ({
+          ...prev,
+          fullName: profileData.full_name || '',
+          email: user.email || '',
+          location: profileData.location || '',
+        }));
+      }
+      
+    } catch (error: any) {
+      console.error("Error initializing resume:", error);
+      toast({
+        title: "Error creating resume",
+        description: error.message,
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
   
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -90,26 +149,72 @@ const Builder = () => {
     );
   };
   
-  const markSectionCompleted = (sectionId: string) => {
-    setSections(prev => 
-      prev.map(section => ({
-        ...section,
-        completed: section.id === sectionId ? true : section.completed,
-        expanded: section.id === sectionId ? false : section.expanded
-      }))
-    );
+  const markSectionCompleted = async (sectionId: string) => {
+    if (!activeResumeId || !user) return;
     
-    // Expand next incomplete section
-    const currentIndex = sections.findIndex(s => s.id === sectionId);
-    if (currentIndex < sections.length - 1) {
+    try {
+      setSaving(true);
+      
+      // For personal and summary sections, save data to resume
+      if (sectionId === 'personal' || sectionId === 'summary') {
+        await updateResume(activeResumeId, {
+          title: formData.title,
+          summary: formData.summary,
+        });
+        
+        // Update user profile for personal data
+        if (sectionId === 'personal') {
+          await supabase.from('profiles').upsert({
+            id: user.id,
+            full_name: formData.fullName,
+            location: formData.location,
+            updated_at: new Date().toISOString(),
+          });
+        }
+      }
+      
       setSections(prev => 
-        prev.map((section, index) => ({
+        prev.map(section => ({
           ...section,
-          expanded: index === currentIndex + 1 ? true : section.expanded
+          completed: section.id === sectionId ? true : section.completed,
+          expanded: section.id === sectionId ? false : section.expanded
         }))
       );
+      
+      // Expand next incomplete section
+      const currentIndex = sections.findIndex(s => s.id === sectionId);
+      if (currentIndex < sections.length - 1) {
+        setSections(prev => 
+          prev.map((section, index) => ({
+            ...section,
+            expanded: index === currentIndex + 1 ? true : section.expanded
+          }))
+        );
+      }
+      
+      toast({
+        title: `${sections.find(s => s.id === sectionId)?.title} completed!`,
+      });
+      
+    } catch (error: any) {
+      console.error("Error saving section:", error);
+      toast({
+        title: "Error saving data",
+        description: error.message,
+        variant: "destructive"
+      });
+    } finally {
+      setSaving(false);
     }
   };
+  
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <p>Loading resume builder...</p>
+      </div>
+    );
+  }
   
   return (
     <div className="min-h-screen pb-20">
@@ -117,7 +222,7 @@ const Builder = () => {
         <button onClick={() => navigate(-1)} className="text-gray-600">
           <ChevronLeft size={24} />
         </button>
-        <h1 className="text-lg font-medium">Fill in your data</h1>
+        <h1 className="text-lg font-medium">Build Your Resume</h1>
         <button className="text-gray-600">
           <MoreVertical size={24} />
         </button>
@@ -156,6 +261,16 @@ const Builder = () => {
                 {section.id === "personal" && (
                   <div className="space-y-4">
                     <div>
+                      <Label htmlFor="title">Resume Title</Label>
+                      <Input
+                        id="title"
+                        name="title"
+                        value={formData.title}
+                        onChange={handleInputChange}
+                      />
+                    </div>
+                    
+                    <div>
                       <Label htmlFor="fullName">Full Name</Label>
                       <Input
                         id="fullName"
@@ -172,8 +287,9 @@ const Builder = () => {
                         name="email"
                         type="email"
                         value={formData.email}
-                        onChange={handleInputChange}
+                        disabled
                       />
+                      <p className="text-xs text-gray-500 mt-1">Email is synced with your account</p>
                     </div>
                     
                     <div>
@@ -183,48 +299,16 @@ const Builder = () => {
                         name="location"
                         value={formData.location}
                         onChange={handleInputChange}
-                        className="border-purple-300"
+                        placeholder="City, Country"
                       />
-                    </div>
-                    
-                    <div>
-                      <Label>Date of Birth</Label>
-                      <div className="grid grid-cols-3 gap-4">
-                        <div>
-                          <Label htmlFor="birthDay" className="text-xs">Day</Label>
-                          <Input
-                            id="birthDay"
-                            name="birthDay"
-                            value={formData.birthDay}
-                            onChange={handleInputChange}
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="birthMonth" className="text-xs">Month</Label>
-                          <Input
-                            id="birthMonth"
-                            name="birthMonth"
-                            value={formData.birthMonth}
-                            onChange={handleInputChange}
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="birthYear" className="text-xs">Year</Label>
-                          <Input
-                            id="birthYear"
-                            name="birthYear"
-                            value={formData.birthYear}
-                            onChange={handleInputChange}
-                          />
-                        </div>
-                      </div>
                     </div>
                     
                     <Button
                       className="w-full"
                       onClick={() => markSectionCompleted("personal")}
+                      disabled={saving}
                     >
-                      Save & Continue
+                      {saving ? "Saving..." : "Save & Continue"}
                     </Button>
                   </div>
                 )}
@@ -246,48 +330,51 @@ const Builder = () => {
                     <Button
                       className="w-full"
                       onClick={() => markSectionCompleted("summary")}
+                      disabled={saving}
                     >
-                      Save & Continue
+                      {saving ? "Saving..." : "Save & Continue"}
                     </Button>
                   </div>
                 )}
                 
-                {section.id === "experience" && (
+                {section.id === "experience" && activeResumeId && (
                   <div className="space-y-4">
-                    <p className="text-sm text-gray-500">Add your work experience</p>
-                    
-                    <Button
-                      variant="outline"
-                      className="w-full"
-                    >
-                      + Add Experience
-                    </Button>
+                    <ExperienceList resumeId={activeResumeId} />
                     
                     <Button
                       className="w-full"
                       onClick={() => markSectionCompleted("experience")}
+                      disabled={saving}
                     >
-                      Save & Continue
+                      {saving ? "Saving..." : "Save & Continue"}
                     </Button>
                   </div>
                 )}
                 
-                {section.id === "education" && (
+                {section.id === "education" && activeResumeId && (
                   <div className="space-y-4">
-                    <p className="text-sm text-gray-500">Add your educational background</p>
-                    
-                    <Button
-                      variant="outline"
-                      className="w-full"
-                    >
-                      + Add Education
-                    </Button>
+                    <EducationList resumeId={activeResumeId} />
                     
                     <Button
                       className="w-full"
                       onClick={() => markSectionCompleted("education")}
+                      disabled={saving}
                     >
-                      Save & Continue
+                      {saving ? "Saving..." : "Save & Continue"}
+                    </Button>
+                  </div>
+                )}
+                
+                {section.id === "skills" && activeResumeId && (
+                  <div className="space-y-4">
+                    <SkillList resumeId={activeResumeId} />
+                    
+                    <Button
+                      className="w-full"
+                      onClick={() => markSectionCompleted("skills")}
+                      disabled={saving}
+                    >
+                      {saving ? "Saving..." : "Save & Continue"}
                     </Button>
                   </div>
                 )}

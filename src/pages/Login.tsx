@@ -6,13 +6,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useToast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Login = () => {
   const navigate = useNavigate();
-  const { toast } = useToast();
+  const { signIn } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -67,19 +68,16 @@ const Login = () => {
     return valid;
   };
   
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (validateForm()) {
-      toast({
-        title: "Login successful",
-        description: "Welcome back to Resumo!",
-      });
-      
-      // Simulate loading and redirect to home
-      setTimeout(() => {
-        navigate("/");
-      }, 1500);
+      setLoading(true);
+      try {
+        await signIn(formData.email, formData.password);
+      } finally {
+        setLoading(false);
+      }
     }
   };
   
@@ -119,6 +117,7 @@ const Login = () => {
                 value={formData.email}
                 onChange={handleChange}
                 className={errors.email ? "border-red-500" : ""}
+                disabled={loading}
               />
               {errors.email && <p className="text-red-500 text-sm">{errors.email}</p>}
             </div>
@@ -139,11 +138,13 @@ const Login = () => {
                   value={formData.password}
                   onChange={handleChange}
                   className={errors.password ? "border-red-500 pr-10" : "pr-10"}
+                  disabled={loading}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500"
+                  disabled={loading}
                 >
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
@@ -156,6 +157,7 @@ const Login = () => {
                 id="remember-me" 
                 checked={formData.rememberMe}
                 onCheckedChange={handleCheckboxChange}
+                disabled={loading}
               />
               <label
                 htmlFor="remember-me"
@@ -166,8 +168,12 @@ const Login = () => {
             </div>
             
             <div className="pt-4">
-              <Button type="submit" className="w-full resume-gradient py-5">
-                Log In
+              <Button 
+                type="submit" 
+                className="w-full resume-gradient py-5"
+                disabled={loading}
+              >
+                {loading ? "Signing In..." : "Log In"}
               </Button>
             </div>
             
