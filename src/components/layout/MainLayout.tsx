@@ -23,9 +23,9 @@ const MainLayout = ({ children }: MainLayoutProps) => {
       <nav className="fixed bottom-0 left-0 right-0 z-10 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700">
         <div className="max-w-md mx-auto">
           <div className="flex justify-around items-center h-16">
-            <Link to="/home" className={cn(
+            <Link to="/" className={cn(
               "flex flex-col items-center justify-center w-full h-full text-xs",
-              isActive("/home") ? "text-resume-primary" : "text-gray-500"
+              isActive("/") ? "text-resume-primary" : "text-gray-500"
             )}>
               <Home size={20} />
               <span className="mt-1">Home</span>

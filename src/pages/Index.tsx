@@ -44,9 +44,7 @@ const Index = () => {
     <MainLayout>
       <div className="px-4 py-6">
         <div className="flex justify-between items-center mb-6">
-          <Link to="/profile">
-            <User className="h-6 w-6 cursor-pointer hover:text-resume-primary transition-colors" />
-          </Link>
+          <User className="h-6 w-6" />
           <h1 className="text-2xl font-bold">Resumo</h1>
           <button 
             onClick={() => toast({
@@ -62,9 +60,7 @@ const Index = () => {
           <h2 className="text-lg font-semibold mb-2">Sign in to your free account</h2>
           <p className="text-sm mb-4">Your guest account will be deleted when time is up. Sign in to save and download your resume.</p>
           <div className="flex gap-4">
-            <Link to="/login">
-              <Button variant="secondary" className="bg-white text-resume-primary hover:bg-gray-100">Sign In Now</Button>
-            </Link>
+            <Button variant="secondary" className="bg-white text-resume-primary hover:bg-gray-100">Sign In Now</Button>
             <div className="bg-white/20 rounded-md px-3 py-2 text-sm font-medium">67:12:45</div>
           </div>
         </div>
