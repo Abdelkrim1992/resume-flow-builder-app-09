@@ -1,3 +1,4 @@
+
 import { createContext, useState, useEffect, useContext, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -23,6 +24,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
 
   useEffect(() => {
+    // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         setSession(session);
@@ -31,6 +33,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     );
 
+    // THEN check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
@@ -42,7 +45,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signUp = async (email: string, password: string, fullName: string) => {
     try {
-      const { data, error } = await supabase.auth.signUp({
+      const { error } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -54,31 +57,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
 
       if (error) throw error;
-      
-      if (data.user) {
-        try {
-          const { error: userError } = await supabase
-            .from('users')
-            .upsert({
-              id: data.user.id,
-              email: email,
-              full_name: fullName,
-              updated_at: new Date().toISOString(),
-              created_at: new Date().toISOString(),
-            });
-            
-          if (userError) {
-            console.error('Error creating user record:', userError);
-            toast({
-              title: "Warning",
-              description: "User created but profile data could not be saved. Please update your profile later.",
-              variant: "destructive"
-            });
-          }
-        } catch (profileError) {
-          console.error('Error saving profile data:', profileError);
-        }
-      }
       
       toast({
         title: "Account created successfully!",

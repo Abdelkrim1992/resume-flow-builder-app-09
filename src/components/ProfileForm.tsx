@@ -35,25 +35,10 @@ const ProfileForm = () => {
         .single();
 
       if (error) {
-        console.error('Error fetching profile:', error.message);
-        // If profile not found, try to get data from users table
-        const { data: userData, error: userError } = await supabase
-          .from('users')
-          .select('*')
-          .eq('id', user?.id)
-          .single();
-          
-        if (userError) {
-          throw error;
-        }
-        
-        if (userData) {
-          setProfile({
-            ...userData,
-            email: user?.email || '',
-          });
-        }
-      } else if (data) {
+        throw error;
+      }
+
+      if (data) {
         setProfile({
           ...data,
           email: user?.email || '',
@@ -81,8 +66,7 @@ const ProfileForm = () => {
     try {
       setLoading(true);
       
-      // Update profile table
-      const { error: profileError } = await supabase.from('profiles').upsert({
+      const { error } = await supabase.from('profiles').upsert({
         id: user?.id,
         full_name: profile.full_name,
         location: profile.location,
@@ -90,25 +74,11 @@ const ProfileForm = () => {
         updated_at: new Date().toISOString(),
       });
 
-      if (profileError) console.error("Error updating profile:", profileError);
+      if (error) throw error;
       
-      // Also update users table to keep data in sync
-      const { error: userError } = await supabase.from('users').upsert({
-        id: user?.id,
-        email: user?.email || '',
-        full_name: profile.full_name,
-        updated_at: new Date().toISOString(),
+      toast({
+        title: "Profile updated successfully!",
       });
-
-      if (userError) console.error("Error updating user:", userError);
-      
-      if (!profileError && !userError) {
-        toast({
-          title: "Profile updated successfully!",
-        });
-      } else {
-        throw new Error("Failed to update profile");
-      }
       
     } catch (error: any) {
       toast({
