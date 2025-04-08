@@ -1,6 +1,5 @@
-
 import { useState, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, useParams } from "react-router-dom";
 import { ChevronLeft, Download, Share, Edit, Eye, MoreVertical, Trash } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -62,8 +61,8 @@ const Preview = () => {
   const [resumeData, setResumeData] = useState<ResumeData | null>(null);
   const { theme } = useTheme();
 
-  // Get resume ID from URL params
-  const resumeId = new URLSearchParams(location.search).get('id');
+  // Get resume ID from URL params using useParams
+  const { id: resumeId } = useParams();
   
   useEffect(() => {
     if (resumeId) {
