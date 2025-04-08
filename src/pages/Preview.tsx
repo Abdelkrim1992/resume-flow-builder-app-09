@@ -163,6 +163,16 @@ const Preview = () => {
         });
       }
       
+      // Transform education data to match the expected format
+      const transformedEducation = education ? education.map(edu => ({
+        institution: edu.institution,
+        degree: edu.degree,
+        field: edu.field_of_study || '', // Map field_of_study to field
+        start_date: edu.start_date,
+        end_date: edu.end_date,
+        current: edu.current
+      })) : [];
+      
       // Construct the full resume data object
       const completeResumeData: ResumeData = {
         ...resumeBasic,
@@ -174,7 +184,7 @@ const Preview = () => {
           summary: resumeBasic.summary || '',
         },
         experience: experiences || [],
-        education: education || [],
+        education: transformedEducation,
         skills: skills ? skills.map(s => s.name) : [],
         template_id: 1 // Default template, can be stored in resumes table
       };
