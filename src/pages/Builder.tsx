@@ -1,10 +1,10 @@
-
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { 
   ChevronLeft, 
   MoreVertical,
-  Check
+  Check,
+  Eye
 } from "lucide-react";
 import { 
   Accordion, 
@@ -24,6 +24,10 @@ import ExperienceList from "@/components/resume/ExperienceList";
 import EducationList from "@/components/resume/EducationList";
 import SkillList from "@/components/resume/SkillList";
 import { supabase } from '@/integrations/supabase/client';
+import { getTemplateById } from '@/services/templateService';
+import { useUser } from '@/hooks/useUser';
+import type { Resume } from '@/services/resumeService';
+import type { Template } from '@/services/templateService';
 
 interface FormSection {
   id: string;
@@ -35,11 +39,12 @@ interface FormSection {
 
 const Builder = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { id } = useParams();
   const { toast } = useToast();
-  
-  const [activeResumeId, setActiveResumeId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const { user } = useUser();
+  const [resume, setResume] = useState<Resume | null>(null);
+  const [template, setTemplate] = useState<Template | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   
   const [formData, setFormData] = useState({
@@ -89,50 +94,71 @@ const Builder = () => {
   ]);
 
   useEffect(() => {
-    if (user) {
-      initializeResume();
+    if (user && id) {
+      fetchResume(id);
     }
-  }, [user]);
+  }, [user, id]);
   
-  const initializeResume = async () => {
-    if (!user) return;
-    
+  const fetchResume = async (resumeId: string) => {
     try {
-      setLoading(true);
-      
-      // For simplicity, we're creating a new resume each time.
-      // In a real app, you'd fetch existing resumes and let the user select one.
-      const resumeData = await createResume("My Resume", user.id);
-      setActiveResumeId(resumeData.id);
-      
-      // Load user profile data
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single();
-      
-      if (profileData) {
-        setFormData(prev => ({
-          ...prev,
-          fullName: profileData.full_name || '',
-          email: user.email || '',
-          location: profileData.location || '',
-        }));
+      setIsLoading(true);
+      const resumeData = await getResumeById(resumeId);
+      if (!resumeData) {
+        toast({
+          title: 'Error',
+          description: 'Resume not found',
+          variant: 'destructive',
+        });
+        navigate('/');
+        return;
       }
-      
-    } catch (error: any) {
-      console.error("Error initializing resume:", error);
+
+      // Fetch the template data
+      if (resumeData.template_id) {
+        const templateData = await getTemplateById(resumeData.template_id);
+        if (templateData) {
+          setTemplate(templateData);
+        }
+      }
+
+      // Set resume data
+      setResume(resumeData);
+      setFormData(prev => ({
+        ...prev,
+        title: resumeData.title || "My Resume",
+        summary: resumeData.summary || ""
+      }));
+
+      // Fetch user profile data
+      if (user) {
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single();
+
+        if (profileData) {
+          setFormData(prev => ({
+            ...prev,
+            fullName: profileData.full_name || '',
+            email: user.email || '',
+            location: profileData.location || '',
+          }));
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching resume:', error);
       toast({
-        title: "Error creating resume",
-        description: error.message,
-        variant: "destructive"
+        title: 'Error',
+        description: 'Failed to fetch resume',
+        variant: 'destructive',
       });
+      navigate('/');
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
-  
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({
@@ -140,25 +166,16 @@ const Builder = () => {
       [name]: value
     }));
   };
-  
-  const toggleSection = (sectionId: string) => {
-    setSections(prev => 
-      prev.map(section => ({
-        ...section,
-        expanded: section.id === sectionId ? !section.expanded : section.expanded
-      }))
-    );
-  };
-  
-  const markSectionCompleted = async (sectionId: string) => {
-    if (!activeResumeId || !user) return;
+
+  const saveSection = async (sectionId: string) => {
+    if (!resume?.id || !user) return;
     
     try {
       setSaving(true);
       
-      // For personal and summary sections, save data to resume
+      // Save resume data
       if (sectionId === 'personal' || sectionId === 'summary') {
-        await updateResume(activeResumeId, {
+        await updateResume(resume.id, {
           title: formData.title,
           summary: formData.summary,
         });
@@ -174,6 +191,7 @@ const Builder = () => {
         }
       }
       
+      // Mark section as completed
       setSections(prev => 
         prev.map(section => ({
           ...section,
@@ -194,71 +212,84 @@ const Builder = () => {
       }
       
       toast({
-        title: `${sections.find(s => s.id === sectionId)?.title} completed!`,
+        title: 'Success',
+        description: `${sections.find(s => s.id === sectionId)?.title} saved successfully`,
       });
       
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error saving section:", error);
       toast({
-        title: "Error saving data",
-        description: error.message,
+        title: "Error",
+        description: "Failed to save changes",
         variant: "destructive"
       });
     } finally {
       setSaving(false);
     }
   };
-  
-  if (loading) {
+
+  if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <p>Loading resume builder...</p>
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-resume-primary mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading resume builder...</p>
+        </div>
       </div>
     );
   }
-  
+
   return (
     <div className="min-h-screen pb-20">
-      <header className="p-4 flex items-center justify-between border-b">
-        <button onClick={() => navigate(-1)} className="text-gray-600">
+      <header className="p-4 flex items-center justify-between border-b bg-white sticky top-0 z-50">
+        <button onClick={() => navigate('/')} className="text-gray-600 hover:text-gray-900">
           <ChevronLeft size={24} />
         </button>
-        <h1 className="text-lg font-medium">Build Your Resume</h1>
-        <button className="text-gray-600">
-          <MoreVertical size={24} />
-        </button>
+        <div className="flex items-center">
+          {template && (
+            <div className="mr-4 text-sm text-gray-600">
+              Template: {template.name}
+            </div>
+          )}
+          <h1 className="text-lg font-medium">{formData.title || 'Untitled Resume'}</h1>
+        </div>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => navigate(`/preview/${id}`)}
+        >
+          <Eye className="h-5 w-5" />
+        </Button>
       </header>
-      
-      <div className="p-4">
+
+      <div className="max-w-3xl mx-auto p-4">
         {sections.map((section) => (
           <Accordion
             key={section.id}
             type="single"
             collapsible
-            className="mb-4 border rounded-lg overflow-hidden"
+            className="mb-4 border rounded-lg overflow-hidden bg-white"
             value={section.expanded ? section.id : ""}
           >
             <AccordionItem value={section.id} className="border-0">
               <AccordionTrigger 
-                onClick={() => toggleSection(section.id)}
                 className={cn(
-                  "px-4 py-3 flex items-center hover:no-underline",
-                  section.completed ? "bg-gray-50" : ""
+                  "px-4 py-3 hover:no-underline",
+                  section.completed && "bg-gray-50"
                 )}
               >
-                <div className="flex-1 text-left flex items-center">
-                  <div>
-                    <h3 className="font-medium flex items-center">
-                      {section.title}
-                      {section.completed && (
-                        <Check size={16} className="ml-2 text-green-500" />
-                      )}
-                    </h3>
-                    <p className="text-sm text-gray-500">{section.subtitle}</p>
-                  </div>
+                <div className="flex-1">
+                  <h3 className="font-medium flex items-center">
+                    {section.title}
+                    {section.completed && (
+                      <Check size={16} className="ml-2 text-green-500" />
+                    )}
+                  </h3>
+                  <p className="text-sm text-gray-500">{section.subtitle}</p>
                 </div>
               </AccordionTrigger>
-              <AccordionContent className="px-4 pb-4 pt-2">
+              
+              <AccordionContent className="p-4">
                 {section.id === "personal" && (
                   <div className="space-y-4">
                     <div>
@@ -268,6 +299,7 @@ const Builder = () => {
                         name="title"
                         value={formData.title}
                         onChange={handleInputChange}
+                        placeholder="e.g., Software Developer Resume"
                       />
                     </div>
                     
@@ -278,6 +310,7 @@ const Builder = () => {
                         name="fullName"
                         value={formData.fullName}
                         onChange={handleInputChange}
+                        placeholder="e.g., John Doe"
                       />
                     </div>
                     
@@ -300,13 +333,13 @@ const Builder = () => {
                         name="location"
                         value={formData.location}
                         onChange={handleInputChange}
-                        placeholder="City, Country"
+                        placeholder="e.g., New York, NY"
                       />
                     </div>
                     
                     <Button
                       className="w-full"
-                      onClick={() => markSectionCompleted("personal")}
+                      onClick={() => saveSection("personal")}
                       disabled={saving}
                     >
                       {saving ? "Saving..." : "Save & Continue"}
@@ -321,16 +354,19 @@ const Builder = () => {
                       <Textarea
                         id="summary"
                         name="summary"
-                        placeholder="Write a brief summary of your professional background..."
                         value={formData.summary}
                         onChange={handleInputChange}
+                        placeholder="Write a brief summary of your professional background..."
                         rows={6}
                       />
+                      <p className="text-xs text-gray-500 mt-1">
+                        Write 3-4 sentences highlighting your key achievements and skills
+                      </p>
                     </div>
                     
                     <Button
                       className="w-full"
-                      onClick={() => markSectionCompleted("summary")}
+                      onClick={() => saveSection("summary")}
                       disabled={saving}
                     >
                       {saving ? "Saving..." : "Save & Continue"}
@@ -338,13 +374,12 @@ const Builder = () => {
                   </div>
                 )}
                 
-                {section.id === "experience" && activeResumeId && (
+                {section.id === "experience" && resume?.id && (
                   <div className="space-y-4">
-                    <ExperienceList resumeId={activeResumeId} />
-                    
+                    <ExperienceList resumeId={resume.id} />
                     <Button
                       className="w-full"
-                      onClick={() => markSectionCompleted("experience")}
+                      onClick={() => saveSection("experience")}
                       disabled={saving}
                     >
                       {saving ? "Saving..." : "Save & Continue"}
@@ -352,13 +387,12 @@ const Builder = () => {
                   </div>
                 )}
                 
-                {section.id === "education" && activeResumeId && (
+                {section.id === "education" && resume?.id && (
                   <div className="space-y-4">
-                    <EducationList resumeId={activeResumeId} />
-                    
+                    <EducationList resumeId={resume.id} />
                     <Button
                       className="w-full"
-                      onClick={() => markSectionCompleted("education")}
+                      onClick={() => saveSection("education")}
                       disabled={saving}
                     >
                       {saving ? "Saving..." : "Save & Continue"}
@@ -366,13 +400,12 @@ const Builder = () => {
                   </div>
                 )}
                 
-                {section.id === "skills" && activeResumeId && (
+                {section.id === "skills" && resume?.id && (
                   <div className="space-y-4">
-                    <SkillList resumeId={activeResumeId} />
-                    
+                    <SkillList resumeId={resume.id} />
                     <Button
                       className="w-full"
-                      onClick={() => markSectionCompleted("skills")}
+                      onClick={() => saveSection("skills")}
                       disabled={saving}
                     >
                       {saving ? "Saving..." : "Save & Continue"}
@@ -387,10 +420,10 @@ const Builder = () => {
       
       <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t">
         <Button 
-          className="w-full resume-gradient"
-          onClick={() => navigate("/preview")}
+          className="w-full bg-resume-primary hover:bg-resume-primary/90 text-white"
+          onClick={() => navigate(`/preview/${id}`)}
         >
-          Preview & Export
+          Preview Resume
         </Button>
       </div>
     </div>
