@@ -2,7 +2,6 @@
 import { useLocation, Link } from "react-router-dom";
 import { Home, FileText, Heart, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useEffect } from "react";
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -14,13 +13,6 @@ const MainLayout = ({ children }: MainLayoutProps) => {
   const isActive = (path: string) => {
     return location.pathname === path;
   };
-
-  // Check system preference for dark mode on component mount
-  useEffect(() => {
-    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-      document.documentElement.classList.add('dark');
-    }
-  }, []);
   
   return (
     <div className="flex flex-col min-h-screen max-w-md mx-auto bg-white dark:bg-gray-900 dark:text-white">

@@ -8,22 +8,14 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useTheme } from "@/contexts/ThemeContext";
 
 const Settings = () => {
-  const [darkMode, setDarkMode] = useState(false);
+  const { theme, toggleTheme } = useTheme();
   const { user, signOut } = useAuth();
   const [profile, setProfile] = useState({ full_name: "User" });
   const navigate = useNavigate();
   const { toast } = useToast();
-  
-  useEffect(() => {
-    // Apply dark mode class to document
-    if (darkMode) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  }, [darkMode]);
   
   useEffect(() => {
     if (user) {
@@ -90,10 +82,10 @@ const Settings = () => {
             
             <div className="flex items-center justify-between p-2">
               <div className="flex items-center">
-                {darkMode ? <Moon size={20} className="mr-3" /> : <Sun size={20} className="mr-3" />}
+                {theme === "dark" ? <Moon size={20} className="mr-3" /> : <Sun size={20} className="mr-3" />}
                 <span>Dark Mode</span>
               </div>
-              <Switch checked={darkMode} onCheckedChange={setDarkMode} />
+              <Switch checked={theme === "dark"} onCheckedChange={toggleTheme} />
             </div>
             
             <Separator />
