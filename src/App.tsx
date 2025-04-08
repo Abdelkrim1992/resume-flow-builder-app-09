@@ -16,7 +16,7 @@ import EditProfile from './pages/EditProfile';
 import Builder from './pages/Builder';
 import Preview from './pages/Preview';
 import NotFound from './pages/NotFound';
-import { ThemeProvider } from './contexts/ThemeContext';
+import { Providers } from './components/providers/Providers';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -30,9 +30,9 @@ const queryClient = new QueryClient({
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider>
-        <AuthProvider>
-          <Router>
+      <Providers>
+        <Router>
+          <AuthProvider>
             <Routes>
               <Route path="/" element={<Welcome />} />
               <Route path="/login" element={<Login />} />
@@ -89,10 +89,10 @@ function App() {
               <Route path="/404" element={<NotFound />} />
               <Route path="*" element={<Navigate to="/404" replace />} />
             </Routes>
-          </Router>
-          <Toaster />
-        </AuthProvider>
-      </ThemeProvider>
+            <Toaster />
+          </AuthProvider>
+        </Router>
+      </Providers>
     </QueryClientProvider>
   );
 }
