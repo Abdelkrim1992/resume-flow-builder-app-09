@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -8,13 +8,20 @@ import { motion } from "framer-motion";
 const Welcome = () => {
   const [isHovering, setIsHovering] = useState(false);
   
+  // Check system preference for dark mode on component mount
+  useEffect(() => {
+    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+      document.documentElement.classList.add('dark');
+    }
+  }, []);
+  
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-white to-gray-50 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-white to-gray-50 dark:from-gray-900 dark:to-gray-800 p-4">
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6 }}
-        className="max-w-md w-full mx-auto text-center"
+        className="max-w-md w-full mx-auto text-center dark:text-white"
       >
         <div className="mb-8">
           <motion.div 
@@ -37,7 +44,7 @@ const Welcome = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.6, duration: 0.6 }}
-            className="text-gray-600 mb-8"
+            className="text-gray-600 dark:text-gray-300 mb-8"
           >
             Create professional resumes in minutes with our intuitive builder
           </motion.p>
@@ -63,14 +70,14 @@ const Welcome = () => {
             </Button>
           </Link>
           
-          <div className="text-sm text-gray-500">
+          <div className="text-sm text-gray-500 dark:text-gray-400">
             Already have an account?{" "}
             <Link to="/login" className="text-resume-primary font-medium hover:underline">
               Log in
             </Link>
           </div>
           
-          <div className="pt-8 text-gray-400 text-xs">
+          <div className="pt-8 text-gray-400 dark:text-gray-500 text-xs">
             <p>By continuing, you agree to our</p>
             <p>
               <a href="#" className="underline">Terms of Service</a> & <a href="#" className="underline">Privacy Policy</a>
