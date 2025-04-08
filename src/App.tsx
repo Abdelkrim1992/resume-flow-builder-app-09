@@ -1,4 +1,3 @@
-
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from './contexts/AuthContext';
@@ -79,8 +78,18 @@ function App() {
                   <Builder />
                 </ProtectedRoute>
               } />
+              <Route path="/builder/:id" element={
+                <ProtectedRoute>
+                  <Builder />
+                </ProtectedRoute>
+              } />
               
               <Route path="/preview" element={
+                <ProtectedRoute>
+                  <Preview />
+                </ProtectedRoute>
+              } />
+              <Route path="/preview/:id" element={
                 <ProtectedRoute>
                   <Preview />
                 </ProtectedRoute>
