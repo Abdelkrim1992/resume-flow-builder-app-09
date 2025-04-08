@@ -1,7 +1,6 @@
-
 import { Link, useNavigate } from "react-router-dom";
-import { useToast } from "@/hooks/use-toast";
-import { FileText, Clock, Plus, User, MoreVertical, Eye, Edit, Trash } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
+import { FileText, Clock, Plus, User, MoreVertical, Eye, Edit, Trash, X, Loader2 } from "lucide-react";
 import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -26,6 +25,14 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { formatDate } from "@/lib/utils";
+import ResumeTemplateCard from "@/components/resume/ResumeTemplateCard";
+import { getTemplates, Template } from "@/services/templateService";
+import { useUser } from '@/hooks/useUser';
+import { getResumes, deleteResume, createResume, deleteAllResumes } from '@/services/resumeService';
+import { PlusCircle } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { cn } from "@/lib/utils";
+import { motion } from "framer-motion";
 
 interface Resume {
   id: string;
@@ -38,76 +45,82 @@ const Index = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { user: userData } = useUser();
   const [loading, setLoading] = useState(true);
   const [resumes, setResumes] = useState<Resume[]>([]);
   const [deleteResumeId, setDeleteResumeId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showTemplateModal, setShowTemplateModal] = useState(false);
+  const [templates, setTemplates] = useState<Template[]>([]);
+  const [templatesLoading, setTemplatesLoading] = useState(false);
+  const [isCreatingResume, setIsCreatingResume] = useState(false);
+  const [isDeletingAll, setIsDeletingAll] = useState(false);
+  const [showDeleteAllDialog, setShowDeleteAllDialog] = useState(false);
   
   useEffect(() => {
     if (user) {
       fetchResumes();
+      fetchTemplates();
     } else {
       setLoading(false);
     }
   }, [user]);
+
+  useEffect(() => {
+    if (showTemplateModal) {
+      fetchTemplates();
+    }
+  }, [showTemplateModal]);
   
   const fetchResumes = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('resumes')
-        .select('*')
-        .eq('user_id', user?.id)
-        .order('updated_at', { ascending: false });
-        
-      if (error) {
-        console.error('Error fetching resumes:', error);
-        toast({
-          title: "Error",
-          description: "Failed to load your resumes",
-          variant: "destructive"
-        });
-      } else {
-        setResumes(data || []);
-      }
-    } catch (err) {
-      console.error('Error:', err);
+      const data = await getResumes(user?.id);
+      setResumes(data);
+    } catch (error) {
+      console.error('Error fetching resumes:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to fetch resumes',
+        variant: 'destructive',
+      });
     } finally {
       setLoading(false);
     }
   };
-  
-  const handleDeleteResume = async () => {
-    if (!deleteResumeId) return;
-    
+
+  const fetchTemplates = async () => {
     try {
-      setIsDeleting(true);
-      const { error } = await supabase
-        .from('resumes')
-        .delete()
-        .eq('id', deleteResumeId)
-        .eq('user_id', user?.id);
-        
-      if (error) {
-        console.error('Error deleting resume:', error);
-        toast({
-          title: "Error",
-          description: "Failed to delete resume",
-          variant: "destructive"
-        });
-      } else {
-        toast({
-          title: "Success",
-          description: "Resume deleted successfully"
-        });
-        // Remove the deleted resume from the state
-        setResumes(resumes.filter(resume => resume.id !== deleteResumeId));
-      }
-    } catch (err) {
-      console.error('Error:', err);
+      setTemplatesLoading(true);
+      const data = await getTemplates();
+      setTemplates(data);
+    } catch (error) {
+      console.error('Error fetching templates:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to fetch templates',
+        variant: 'destructive',
+      });
     } finally {
-      setIsDeleting(false);
-      setDeleteResumeId(null);
+      setTemplatesLoading(false);
+    }
+  };
+  
+  const handleDeleteResume = async (id: string) => {
+    try {
+      await deleteResume(id);
+      setResumes(resumes.filter(resume => resume.id !== id));
+      toast({
+        title: 'Success',
+        description: 'Resume deleted successfully',
+      });
+    } catch (error) {
+      console.error('Error deleting resume:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to delete resume',
+        variant: 'destructive',
+      });
     }
   };
   
@@ -127,6 +140,125 @@ const Index = () => {
     });
   };
   
+  const handleTemplateSelect = async (templateId: number) => {
+    if (!user?.id) {
+      toast({
+        title: "Error",
+        description: "You must be logged in to create a resume",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      setIsCreatingResume(true);
+
+      // Get user profile data first
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+
+      if (profileError) {
+        console.error('Error fetching profile:', profileError);
+      }
+
+      // Create initial sections with sample data that can be modified later
+      const newResume = await createResume({
+        user_id: user.id,
+        template_id: templateId,
+        title: "Untitled Resume",
+        personal_data: {
+          first_name: profileData?.first_name || "",
+          last_name: profileData?.last_name || "",
+          email: user.email || "",
+          phone: profileData?.phone || "",
+          address: profileData?.address || "",
+          city: profileData?.city || "",
+          country: profileData?.country || "",
+          postal_code: profileData?.postal_code || "",
+        },
+        summary: profileData?.summary || "A dedicated professional with experience in...",
+        experiences: [
+          {
+            company: "Company Name",
+            position: "Position Title",
+            start_date: "",
+            end_date: "",
+            current: false,
+            description: "• Key achievements and responsibilities\n• Projects and initiatives\n• Skills and technologies used",
+            location: ""
+          }
+        ],
+        education: [
+          {
+            school: "University/Institution Name",
+            degree: "Degree/Certificate",
+            field_of_study: "Field of Study",
+            start_date: "",
+            end_date: "",
+            description: "• Relevant coursework\n• Academic achievements\n• Projects and research",
+            location: ""
+          }
+        ],
+        skills: [
+          {
+            category: "Technical Skills",
+            skills: ["Skill 1", "Skill 2", "Skill 3"]
+          },
+          {
+            category: "Soft Skills",
+            skills: ["Communication", "Leadership", "Problem Solving"]
+          }
+        ]
+      });
+
+      // Update the resumes list with the new resume
+      setResumes(prev => [...prev, newResume]);
+      
+      setShowTemplateModal(false);
+      navigate(`/builder/${newResume.id}`);
+      toast({
+        title: "Success",
+        description: "Resume created successfully. You can now customize it in the builder.",
+      });
+    } catch (error) {
+      console.error("Error creating resume:", error);
+      toast({
+        title: "Error",
+        description: "Failed to create resume",
+        variant: "destructive",
+      });
+    } finally {
+      setIsCreatingResume(false);
+    }
+  };
+
+  const handleDeleteAllResumes = async () => {
+    if (!user?.id) return;
+    
+    try {
+      setIsDeletingAll(true);
+      await deleteAllResumes(user.id);
+      setResumes([]);
+      setShowDeleteAllDialog(false);
+      toast({
+        title: 'Success',
+        description: 'All resumes deleted successfully',
+      });
+    } catch (error) {
+      console.error('Error deleting all resumes:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to delete all resumes',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsDeletingAll(false);
+    }
+  };
+
   return (
     <MainLayout>
       <div className="px-4 py-6">
@@ -161,23 +293,42 @@ const Index = () => {
         )}
         
         <div className="flex justify-between gap-4 mb-8">
-          <Link to="/templates" className="flex-1">
-            <Button variant="outline" className="w-full h-20 flex flex-col items-center justify-center hover:border-resume-primary hover:text-resume-primary transition-all duration-200 hover:scale-[1.02] dark:border-gray-700 dark:text-gray-200">
-              <FileText className="h-6 w-6 mb-1" />
-              <span>New resume</span>
-            </Button>
-          </Link>
-          <Button variant="outline" className="flex-1 h-20 flex flex-col items-center justify-center hover:border-resume-primary hover:text-resume-primary transition-all duration-200 hover:scale-[1.02] dark:border-gray-700 dark:text-gray-200">
-            <FileText className="h-6 w-6 mb-1" />
-            <span>Cover letter</span>
+          <Button 
+            onClick={() => setShowTemplateModal(true)}
+            variant="outline" 
+            className="w-full h-20 flex flex-col items-center justify-center hover:border-resume-primary hover:text-resume-primary transition-all duration-200 hover:scale-[1.02] dark:border-gray-700 dark:text-gray-200"
+          >
+            <PlusCircle className="h-6 w-6 mb-1" />
+            <span>New resume</span>
+          </Button>
+          <Button 
+            onClick={() => setShowTemplateModal(true)}
+            variant="outline" 
+            className="flex-1 h-20 flex flex-col items-center justify-center hover:border-resume-primary hover:text-resume-primary transition-all duration-200 hover:scale-[1.02] dark:border-gray-700 dark:text-gray-200"
+          >
+            <PlusCircle className="h-6 w-6 mb-1" />
+            <span>New resume</span>
           </Button>
         </div>
         
         <div className="mb-6">
-          <h2 className="text-xl font-semibold mb-4 flex items-center">
-            <span className="bg-resume-accent/20 h-6 w-1 rounded mr-2"></span>
-            My Resumes
-          </h2>
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-semibold flex items-center">
+              <span className="bg-resume-accent/20 h-6 w-1 rounded mr-2"></span>
+              My Resumes
+            </h2>
+            {resumes.length > 0 && (
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => setShowDeleteAllDialog(true)}
+                disabled={isDeletingAll}
+              >
+                <Trash className="h-4 w-4 mr-2" />
+                Delete All
+              </Button>
+            )}
+          </div>
           
           {loading ? (
             <div className="space-y-4">
@@ -225,14 +376,14 @@ const Index = () => {
                     <DropdownMenuContent align="end" className="w-48">
                       <DropdownMenuItem 
                         className="cursor-pointer flex items-center" 
-                        onClick={() => navigate(`/preview?id=${resume.id}`)}
+                        onClick={() => navigate(`/preview/${resume.id}`)}
                       >
                         <Eye className="mr-2 h-4 w-4" />
-                        View
+                        View Resume
                       </DropdownMenuItem>
                       <DropdownMenuItem 
                         className="cursor-pointer flex items-center" 
-                        onClick={() => navigate(`/builder?id=${resume.id}`)}
+                        onClick={() => navigate(`/builder/${resume.id}`)}
                       >
                         <Edit className="mr-2 h-4 w-4" />
                         Edit
@@ -254,24 +405,66 @@ const Index = () => {
               <FileText className="h-12 w-12 mx-auto text-gray-400 mb-3" />
               <h3 className="text-lg font-medium mb-1">No resumes yet</h3>
               <p className="text-gray-500 dark:text-gray-400 mb-4">Create your first resume to get started</p>
-              <Link to="/templates">
-                <Button className="bg-resume-primary hover:bg-resume-primary/90">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create Resume
-                </Button>
-              </Link>
+              <Button 
+                onClick={() => setShowTemplateModal(true)} 
+                className="bg-resume-primary hover:bg-resume-primary/90"
+              >
+                <PlusCircle className="h-4 w-4 mr-2" />
+                Create Resume
+              </Button>
             </div>
           )}
         </div>
         
-        <Link to="/templates">
-          <Button 
-            className="fixed bottom-20 right-6 h-14 w-14 rounded-full resume-gradient resume-shadow flex items-center justify-center hover:scale-105 transition-transform"
-            variant="default"
-          >
-            <Plus className="h-6 w-6" />
-          </Button>
-        </Link>
+        {/* Template Selection Modal */}
+        {showTemplateModal && (
+          <Dialog open={showTemplateModal} onOpenChange={setShowTemplateModal}>
+            <DialogContent className="max-w-4xl w-[95vw] h-[90vh] p-0 flex flex-col overflow-hidden">
+              <DialogHeader className="p-6 pb-2 border-b shrink-0 bg-background">
+                <DialogTitle className="text-xl">Choose a Resume Template</DialogTitle>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Select a template to get started with your new resume
+                </p>
+              </DialogHeader>
+              
+              {templatesLoading ? (
+                <div className="flex justify-center items-center p-8 flex-1">
+                  <Loader2 className="h-8 w-8 animate-spin" />
+                </div>
+              ) : (
+                <div className="flex-1 overflow-y-auto">
+                  <div className="p-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 min-h-min">
+                      {templates.map((template) => (
+                        <motion.div
+                          key={template.id}
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.3 }}
+                          className="group cursor-pointer"
+                          onClick={() => handleTemplateSelect(template.id)}
+                        >
+                          <div className="relative aspect-[8.5/11] rounded-lg overflow-hidden border-2 border-transparent group-hover:border-resume-primary transition-all duration-300 bg-muted/30">
+                            <img
+                              src={template.preview_image_url || '/placeholder-template.png'}
+                              alt={template.name}
+                              className="w-full h-full object-cover"
+                            />
+                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-300" />
+                            <div className="absolute bottom-0 inset-x-0 p-3 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                              <p className="text-white text-sm font-medium">{template.name}</p>
+                              <p className="text-white/80 text-xs">{template.category}</p>
+                            </div>
+                          </div>
+                        </motion.div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
       
       <AlertDialog open={!!deleteResumeId} onOpenChange={(open) => !open && setDeleteResumeId(null)}>
@@ -285,11 +478,32 @@ const Index = () => {
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
             <AlertDialogAction 
-              onClick={handleDeleteResume}
+              onClick={() => handleDeleteResume(deleteResumeId as string)}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               disabled={isDeleting}
             >
               {isDeleting ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      
+      <AlertDialog open={showDeleteAllDialog} onOpenChange={setShowDeleteAllDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete All Resumes?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete all your resumes and their associated data. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeletingAll}>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteAllResumes}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={isDeletingAll}
+            >
+              {isDeletingAll ? "Deleting..." : "Delete All"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
