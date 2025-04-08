@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Save, Upload, Camera } from "lucide-react";
@@ -11,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useTheme } from "@/contexts/ThemeContext";
 
 interface UserProfile {
   id: string;
@@ -36,6 +36,7 @@ const EditProfile = () => {
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [imageDialogOpen, setImageDialogOpen] = useState(false);
   const { toast } = useToast();
+  const { theme } = useTheme();
 
   useEffect(() => {
     const fetchUserProfile = async () => {
@@ -43,7 +44,6 @@ const EditProfile = () => {
       
       try {
         setLoading(true);
-        // First try to get from the users table
         let { data: userData, error: userError } = await supabase
           .from("users")
           .select("*")
@@ -60,7 +60,6 @@ const EditProfile = () => {
           return;
         }
 
-        // Set initial data from users table
         setProfile(userData as UserProfile);
         setImageUrl(userData.avatar_url);
         
@@ -69,7 +68,6 @@ const EditProfile = () => {
           location: "", // Will be populated from profiles table if available
         });
         
-        // Try to get location from profiles table
         try {
           const { data: profileData, error: profileError } = await supabase
             .from("profiles")
@@ -78,13 +76,11 @@ const EditProfile = () => {
             .single();
             
           if (!profileError && profileData) {
-            // Update form data with location from profiles
             setFormData(prev => ({
               ...prev,
               location: profileData.location || ""
             }));
             
-            // Update profile with location
             setProfile(prev => prev ? {
               ...prev,
               location: profileData.location
@@ -115,7 +111,6 @@ const EditProfile = () => {
     const file = e.target.files?.[0];
     if (!file || !user) return;
 
-    // Check file size (limit to 2MB)
     if (file.size > 2 * 1024 * 1024) {
       toast({
         title: "File too large",
@@ -125,7 +120,6 @@ const EditProfile = () => {
       return;
     }
 
-    // Check file type
     if (!file.type.startsWith('image/')) {
       toast({
         title: "Invalid file type",
@@ -139,12 +133,10 @@ const EditProfile = () => {
       setUploading(true);
       setImageDialogOpen(false);
 
-      // Create a unique filename
       const fileExt = file.name.split('.').pop();
       const fileName = `${user.id}-${Math.random().toString(36).substring(2)}.${fileExt}`;
       const filePath = `avatars/${fileName}`;
 
-      // First, check if storage bucket exists, if not add toast message
       const { data: bucketData, error: bucketError } = await supabase.storage.getBucket('avatars');
       
       if (bucketError && bucketError.message.includes('The resource was not found')) {
@@ -157,7 +149,6 @@ const EditProfile = () => {
         return;
       }
 
-      // Upload the file
       const { error: uploadError } = await supabase.storage
         .from('avatars')
         .upload(filePath, file);
@@ -166,7 +157,6 @@ const EditProfile = () => {
         throw uploadError;
       }
 
-      // Get the public URL
       const { data: publicURL } = supabase.storage
         .from('avatars')
         .getPublicUrl(filePath);
@@ -198,7 +188,6 @@ const EditProfile = () => {
     try {
       setSaving(true);
       
-      // Try to update the profiles table first
       const { error: profileError } = await supabase
         .from("profiles")
         .upsert({
@@ -213,7 +202,6 @@ const EditProfile = () => {
         console.error('Error updating profile:', profileError);
       }
 
-      // Also update the users table
       const { error: userError } = await supabase
         .from("users")
         .upsert({
@@ -232,7 +220,6 @@ const EditProfile = () => {
         title: "Profile updated successfully",
       });
       
-      // Navigate back to profile page
       navigate("/profile");
     } catch (error: any) {
       console.error('Error updating profile:', error);
@@ -257,17 +244,17 @@ const EditProfile = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-white to-gray-50 p-4">
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-background to-muted/50 p-4">
       <header className="py-4 flex items-center justify-between">
         <Button
           variant="ghost"
           size="icon"
           onClick={() => navigate(-1)}
-          className="text-gray-600"
+          className="text-foreground/70"
         >
           <ArrowLeft size={24} />
         </Button>
-        <h1 className="text-xl font-semibold">Edit Profile</h1>
+        <h1 className="text-xl font-semibold text-foreground">Edit Profile</h1>
         <div className="w-10"></div>
       </header>
 
@@ -285,7 +272,7 @@ const EditProfile = () => {
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="flex justify-center mb-8">
                 <div className="relative">
-                  <Avatar className="w-24 h-24 text-lg border-2 border-white shadow-lg">
+                  <Avatar className="w-24 h-24 text-lg border-2 border-background shadow-lg">
                     <AvatarImage src={imageUrl || ''} />
                     <AvatarFallback>{getInitials(formData.full_name)}</AvatarFallback>
                   </Avatar>
@@ -302,24 +289,26 @@ const EditProfile = () => {
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="full_name">Full Name</Label>
+                <Label htmlFor="full_name" className="text-foreground">Full Name</Label>
                 <Input
                   id="full_name"
                   name="full_name"
                   value={formData.full_name}
                   onChange={handleChange}
                   placeholder="Your full name"
+                  className="bg-card text-card-foreground"
                 />
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="location">Location</Label>
+                <Label htmlFor="location" className="text-foreground">Location</Label>
                 <Input
                   id="location"
                   name="location"
                   value={formData.location || ""}
                   onChange={handleChange}
                   placeholder="City, Country"
+                  className="bg-card text-card-foreground"
                 />
               </div>
               
@@ -343,9 +332,8 @@ const EditProfile = () => {
         </div>
       </div>
 
-      {/* Image Upload Dialog */}
       <Dialog open={imageDialogOpen} onOpenChange={setImageDialogOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md bg-background text-foreground">
           <DialogHeader>
             <DialogTitle>Upload Profile Picture</DialogTitle>
           </DialogHeader>
@@ -353,11 +341,11 @@ const EditProfile = () => {
             <div className="flex items-center justify-center flex-col gap-4">
               <Label 
                 htmlFor="picture" 
-                className="cursor-pointer border-2 border-dashed border-gray-300 rounded-lg p-8 w-full flex flex-col items-center justify-center gap-2 hover:bg-gray-50 transition-colors"
+                className="cursor-pointer border-2 border-dashed border-border rounded-lg p-8 w-full flex flex-col items-center justify-center gap-2 hover:bg-muted transition-colors"
               >
-                <Upload className="h-8 w-8 text-gray-500" />
-                <span className="text-sm text-gray-500">Click to select an image</span>
-                <span className="text-xs text-gray-400">JPG, PNG, GIF up to 2MB</span>
+                <Upload className="h-8 w-8 text-muted-foreground" />
+                <span className="text-sm text-muted-foreground">Click to select an image</span>
+                <span className="text-xs text-muted-foreground/70">JPG, PNG, GIF up to 2MB</span>
               </Label>
               <Input
                 id="picture"

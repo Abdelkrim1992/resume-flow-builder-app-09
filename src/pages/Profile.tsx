@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, User, LogOut } from "lucide-react";
@@ -8,8 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
+import { useTheme } from "@/contexts/ThemeContext";
 
-// Define our own UserProfile interface instead of extending Tables
 interface UserProfile {
   id: string;
   email: string;
@@ -26,6 +25,7 @@ const Profile = () => {
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const { toast } = useToast();
+  const { theme } = useTheme();
 
   useEffect(() => {
     const fetchUserProfile = async () => {
@@ -34,7 +34,6 @@ const Profile = () => {
       try {
         setLoading(true);
         
-        // First try to get from the users table
         const { data, error } = await supabase
           .from("users")
           .select("*")
@@ -43,7 +42,6 @@ const Profile = () => {
 
         if (error) {
           console.error('Error fetching user data:', error);
-          // If no data in users table, try to construct from auth user
           if (error.code === 'PGRST116') {
             setProfile({
               id: user.id,
@@ -64,10 +62,8 @@ const Profile = () => {
           return;
         }
 
-        // Successfully fetched user data
         setProfile(data as UserProfile);
         
-        // Optionally, try to get location from profiles table if it exists
         try {
           const { data: profileData, error: profileError } = await supabase
             .from("profiles")
@@ -114,17 +110,17 @@ const Profile = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-white to-gray-50 p-4">
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-background to-muted/50 p-4">
       <header className="py-4 flex items-center justify-between">
         <Button
           variant="ghost"
           size="icon"
           onClick={() => navigate(-1)}
-          className="text-gray-600"
+          className="text-foreground/70"
         >
           <ArrowLeft size={24} />
         </Button>
-        <h1 className="text-xl font-semibold">My Profile</h1>
+        <h1 className="text-xl font-semibold text-foreground">My Profile</h1>
         <div className="w-10"></div>
       </header>
 
@@ -137,20 +133,20 @@ const Profile = () => {
           </>
         ) : (
           <>
-            <Avatar className="w-24 h-24 text-lg border-2 border-white shadow-lg">
+            <Avatar className="w-24 h-24 text-lg border-2 border-background shadow-lg">
               <AvatarImage src={profile?.avatar_url || ''} />
               <AvatarFallback>{getInitials(profile?.full_name)}</AvatarFallback>
             </Avatar>
-            <h2 className="text-2xl font-bold mt-4">{profile?.full_name || 'User'}</h2>
-            <p className="text-gray-500 mt-1">{profile?.email}</p>
+            <h2 className="text-2xl font-bold mt-4 text-foreground">{profile?.full_name || 'User'}</h2>
+            <p className="text-muted-foreground mt-1">{profile?.email}</p>
             {profile?.location && (
-              <p className="text-gray-500 mt-1">{profile.location}</p>
+              <p className="text-muted-foreground mt-1">{profile.location}</p>
             )}
           </>
         )}
 
         <div className="w-full max-w-md mt-12 space-y-4">
-          <div className="bg-white rounded-lg shadow p-4">
+          <div className="bg-card rounded-lg shadow p-4 text-card-foreground">
             <h3 className="font-medium mb-4">Account Information</h3>
             {loading ? (
               <>
@@ -160,21 +156,21 @@ const Profile = () => {
             ) : (
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-gray-500">Email</span>
+                  <span className="text-muted-foreground">Email</span>
                   <span>{profile?.email}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-500">Full Name</span>
+                  <span className="text-muted-foreground">Full Name</span>
                   <span>{profile?.full_name || 'Not set'}</span>
                 </div>
                 {profile?.location && (
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Location</span>
+                    <span className="text-muted-foreground">Location</span>
                     <span>{profile.location}</span>
                   </div>
                 )}
                 <div className="flex justify-between">
-                  <span className="text-gray-500">Joined</span>
+                  <span className="text-muted-foreground">Joined</span>
                   <span>{profile?.created_at ? new Date(profile.created_at).toLocaleDateString() : 'Unknown'}</span>
                 </div>
               </div>
@@ -183,8 +179,8 @@ const Profile = () => {
 
           <Button
             variant="outline"
-            className="w-full flex items-center justify-center gap-2 border-dashed border-gray-300"
-            onClick={() => navigate('/edit-profile')}
+            className="w-full flex items-center justify-center gap-2 border-dashed border-border"
+            onClick={() => navigate('/profile/edit')}
           >
             <User size={16} />
             <span>Edit Profile</span>
