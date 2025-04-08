@@ -21,6 +21,7 @@ interface ResumeData {
   id: string;
   user_id: string;
   title: string;
+  template_id: number;
   personal_info: {
     full_name: string;
     email: string;
@@ -29,6 +30,7 @@ interface ResumeData {
     summary?: string;
   };
   experience: Array<{
+    id?: string;
     company: string;
     position: string;
     start_date: string;
@@ -37,6 +39,7 @@ interface ResumeData {
     description: string;
   }>;
   education: Array<{
+    id?: string;
     institution: string;
     degree: string;
     field: string;
@@ -45,7 +48,6 @@ interface ResumeData {
     current?: boolean;
   }>;
   skills: string[];
-  template_id: number;
   created_at: string;
   updated_at: string;
 }
@@ -64,7 +66,7 @@ const Preview = () => {
   const resumeId = new URLSearchParams(location.search).get('id');
   
   useEffect(() => {
-    if (resumeId && user) {
+    if (resumeId) {
       fetchResumeData();
     } else {
       // Use mock data for demonstration if no ID provided
@@ -114,7 +116,6 @@ const Preview = () => {
         .from('resumes')
         .select('*')
         .eq('id', resumeId)
-        .eq('user_id', user?.id)
         .single();
         
       if (resumeError) {
@@ -165,6 +166,7 @@ const Preview = () => {
       
       // Transform education data to match the expected format
       const transformedEducation = education ? education.map(edu => ({
+        id: edu.id,
         institution: edu.institution,
         degree: edu.degree,
         field: edu.field_of_study || '', // Map field_of_study to field
@@ -178,7 +180,7 @@ const Preview = () => {
         ...resumeBasic,
         personal_info: {
           full_name: profile?.full_name || 'No Name',
-          email: profile?.email || 'No Email',
+          email: profile?.email || user?.email || 'No Email',
           phone: 'No Phone', // Add this field to profiles table if needed
           location: profile?.location || 'No Location',
           summary: resumeBasic.summary || '',
@@ -186,7 +188,7 @@ const Preview = () => {
         experience: experiences || [],
         education: transformedEducation,
         skills: skills ? skills.map(s => s.name) : [],
-        template_id: 1 // Default template, can be stored in resumes table
+        template_id: resumeBasic.template_id || 1
       };
       
       setResumeData(completeResumeData);
@@ -211,31 +213,9 @@ const Preview = () => {
     });
   };
 
-  const renderResumePreview = () => {
-    if (loading) {
-      return (
-        <div className="flex flex-col items-center justify-center h-full">
-          <Skeleton className="h-80 w-full max-w-md" />
-          <Skeleton className="h-10 w-40 mt-4" />
-        </div>
-      );
-    }
-
-    if (!resumeData) {
-      return (
-        <div className="text-center p-8">
-          <p className="text-muted-foreground">No resume data available.</p>
-          <Button 
-            onClick={() => navigate('/builder')} 
-            className="mt-4"
-          >
-            Create Resume
-          </Button>
-        </div>
-      );
-    }
-
-    // Modern resume preview template
+  const renderModernTemplate = () => {
+    if (!resumeData) return null;
+    
     return (
       <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-xl max-w-md mx-auto text-left overflow-auto max-h-[70vh] animate-fade-in">
         <div className="border-b border-gray-200 dark:border-gray-700 pb-4 mb-4">
@@ -259,15 +239,15 @@ const Preview = () => {
         <div className="mb-6">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-700 pb-1 mb-3">Experience</h2>
           {resumeData.experience.length > 0 ? resumeData.experience.map((exp, index) => (
-            <div key={index} className="mb-4">
+            <div key={exp.id || index} className="mb-4">
               <div className="flex justify-between items-start">
                 <div>
                   <h3 className="font-medium text-gray-900 dark:text-white">{exp.position}</h3>
                   <p className="text-sm text-gray-700 dark:text-gray-300">{exp.company}</p>
                 </div>
                 <p className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                  {exp.start_date ? new Date(exp.start_date).toLocaleDateString('en-US', { year: 'numeric', month: 'short' }) : ''} - 
-                  {exp.current ? ' Present' : exp.end_date ? ` ${new Date(exp.end_date).toLocaleDateString('en-US', { year: 'numeric', month: 'short' })}` : ''}
+                  {formatDate(exp.start_date, 'short')} - 
+                  {exp.current ? ' Present' : exp.end_date ? ` ${formatDate(exp.end_date, 'short')}` : ''}
                 </p>
               </div>
               <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">{exp.description}</p>
@@ -280,15 +260,15 @@ const Preview = () => {
         <div className="mb-6">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-700 pb-1 mb-3">Education</h2>
           {resumeData.education.length > 0 ? resumeData.education.map((edu, index) => (
-            <div key={index} className="mb-4">
+            <div key={edu.id || index} className="mb-4">
               <div className="flex justify-between items-start">
                 <div>
                   <h3 className="font-medium text-gray-900 dark:text-white">{edu.institution}</h3>
                   <p className="text-sm text-gray-700 dark:text-gray-300">{edu.degree} in {edu.field}</p>
                 </div>
                 <p className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                  {edu.start_date ? new Date(edu.start_date).toLocaleDateString('en-US', { year: 'numeric', month: 'short' }) : ''} - 
-                  {edu.current ? ' Present' : edu.end_date ? ` ${new Date(edu.end_date).toLocaleDateString('en-US', { year: 'numeric', month: 'short' })}` : ''}
+                  {formatDate(edu.start_date, 'short')} - 
+                  {edu.current ? ' Present' : edu.end_date ? ` ${formatDate(edu.end_date, 'short')}` : ''}
                 </p>
               </div>
             </div>
@@ -316,6 +296,321 @@ const Preview = () => {
         </div>
       </div>
     );
+  };
+
+  const renderMinimalistTemplate = () => {
+    if (!resumeData) return null;
+    
+    return (
+      <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-xl max-w-md mx-auto text-left overflow-auto max-h-[70vh] animate-fade-in">
+        <div className="text-center mb-6">
+          <h1 className="text-2xl font-medium text-gray-900 dark:text-white uppercase tracking-wide">{resumeData.personal_info.full_name}</h1>
+          <div className="flex flex-wrap justify-center gap-4 mt-2 text-sm text-gray-600 dark:text-gray-400">
+            <span className="flex items-center"><Eye className="w-3 h-3 mr-1" /> {resumeData.personal_info.email}</span>
+            <span className="flex items-center"><Trash className="w-3 h-3 mr-1" /> {resumeData.personal_info.phone}</span>
+            <span className="flex items-center"><Edit className="w-3 h-3 mr-1" /> {resumeData.personal_info.location}</span>
+          </div>
+        </div>
+        
+        <hr className="border-gray-200 dark:border-gray-700 my-4" />
+        
+        {resumeData.personal_info.summary && (
+          <>
+            <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed text-center mb-4">{resumeData.personal_info.summary}</p>
+            <hr className="border-gray-200 dark:border-gray-700 my-4" />
+          </>
+        )}
+        
+        <div className="mb-6">
+          <h2 className="text-base font-medium text-gray-900 dark:text-white uppercase tracking-wider mb-3">Experience</h2>
+          {resumeData.experience.length > 0 ? resumeData.experience.map((exp, index) => (
+            <div key={exp.id || index} className="mb-4">
+              <div className="flex justify-between items-baseline">
+                <h3 className="font-medium text-gray-900 dark:text-white">{exp.position} • {exp.company}</h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  {formatDate(exp.start_date, 'short')} - 
+                  {exp.current ? ' Present' : exp.end_date ? ` ${formatDate(exp.end_date, 'short')}` : ''}
+                </p>
+              </div>
+              <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">{exp.description}</p>
+            </div>
+          )) : (
+            <p className="text-sm text-gray-500 dark:text-gray-400 italic">No experience added</p>
+          )}
+        </div>
+        
+        <div className="mb-6">
+          <h2 className="text-base font-medium text-gray-900 dark:text-white uppercase tracking-wider mb-3">Education</h2>
+          {resumeData.education.length > 0 ? resumeData.education.map((edu, index) => (
+            <div key={edu.id || index} className="mb-3 flex justify-between">
+              <div>
+                <h3 className="font-medium text-gray-900 dark:text-white">{edu.institution}</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-300">{edu.degree}, {edu.field}</p>
+              </div>
+              <p className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                {formatDate(edu.start_date, 'short')} - 
+                {edu.current ? ' Present' : edu.end_date ? ` ${formatDate(edu.end_date, 'short')}` : ''}
+              </p>
+            </div>
+          )) : (
+            <p className="text-sm text-gray-500 dark:text-gray-400 italic">No education added</p>
+          )}
+        </div>
+        
+        <div>
+          <h2 className="text-base font-medium text-gray-900 dark:text-white uppercase tracking-wider mb-3">Skills</h2>
+          {resumeData.skills.length > 0 ? (
+            <div className="flex flex-wrap gap-1">
+              {resumeData.skills.map((skill, index) => (
+                <span 
+                  key={index} 
+                  className="text-xs border border-gray-300 dark:border-gray-600 px-2 py-1"
+                >
+                  {skill}
+                </span>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-gray-500 dark:text-gray-400 italic">No skills added</p>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  const renderProfessionalTemplate = () => {
+    if (!resumeData) return null;
+    
+    return (
+      <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-xl max-w-md mx-auto text-left overflow-auto max-h-[70vh] animate-fade-in">
+        <div className="flex flex-col md:flex-row md:items-center justify-between border-b-2 border-resume-primary pb-4 mb-6">
+          <div>
+            <h1 className="text-2xl font-bold text-resume-primary">{resumeData.personal_info.full_name}</h1>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{resumeData.personal_info.location}</p>
+          </div>
+          <div className="mt-2 md:mt-0 text-right">
+            <p className="text-sm text-gray-700 dark:text-gray-300">{resumeData.personal_info.email}</p>
+            <p className="text-sm text-gray-700 dark:text-gray-300">{resumeData.personal_info.phone}</p>
+          </div>
+        </div>
+        
+        {resumeData.personal_info.summary && (
+          <div className="mb-6">
+            <div className="flex items-center mb-2">
+              <div className="w-1 h-5 bg-resume-primary mr-2"></div>
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Professional Summary</h2>
+            </div>
+            <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed pl-3 border-l border-gray-200 dark:border-gray-700">{resumeData.personal_info.summary}</p>
+          </div>
+        )}
+        
+        <div className="mb-6">
+          <div className="flex items-center mb-2">
+            <div className="w-1 h-5 bg-resume-primary mr-2"></div>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Experience</h2>
+          </div>
+          {resumeData.experience.length > 0 ? resumeData.experience.map((exp, index) => (
+            <div key={exp.id || index} className="mb-4 pl-3 border-l border-gray-200 dark:border-gray-700">
+              <div className="flex justify-between items-start">
+                <div>
+                  <h3 className="font-semibold text-gray-900 dark:text-white">{exp.position}</h3>
+                  <p className="text-sm font-medium text-resume-primary">{exp.company}</p>
+                </div>
+                <p className="text-xs bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded text-gray-600 dark:text-gray-300">
+                  {formatDate(exp.start_date, 'short')} - 
+                  {exp.current ? ' Present' : exp.end_date ? ` ${formatDate(exp.end_date, 'short')}` : ''}
+                </p>
+              </div>
+              <p className="text-sm text-gray-600 dark:text-gray-300 mt-2">{exp.description}</p>
+            </div>
+          )) : (
+            <p className="text-sm text-gray-500 dark:text-gray-400 italic pl-3">No experience added</p>
+          )}
+        </div>
+        
+        <div className="mb-6">
+          <div className="flex items-center mb-2">
+            <div className="w-1 h-5 bg-resume-primary mr-2"></div>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Education</h2>
+          </div>
+          {resumeData.education.length > 0 ? resumeData.education.map((edu, index) => (
+            <div key={edu.id || index} className="mb-3 pl-3 border-l border-gray-200 dark:border-gray-700">
+              <div className="flex justify-between">
+                <div>
+                  <h3 className="font-semibold text-gray-900 dark:text-white">{edu.institution}</h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-300">{edu.degree}, {edu.field}</p>
+                </div>
+                <p className="text-xs bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded text-gray-600 dark:text-gray-300">
+                  {formatDate(edu.start_date, 'short')} - 
+                  {edu.current ? ' Present' : edu.end_date ? ` ${formatDate(edu.end_date, 'short')}` : ''}
+                </p>
+              </div>
+            </div>
+          )) : (
+            <p className="text-sm text-gray-500 dark:text-gray-400 italic pl-3">No education added</p>
+          )}
+        </div>
+        
+        <div>
+          <div className="flex items-center mb-2">
+            <div className="w-1 h-5 bg-resume-primary mr-2"></div>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Skills</h2>
+          </div>
+          {resumeData.skills.length > 0 ? (
+            <div className="flex flex-wrap gap-2 pl-3">
+              {resumeData.skills.map((skill, index) => (
+                <span 
+                  key={index} 
+                  className="text-xs bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300 px-3 py-1 rounded-full"
+                >
+                  {skill}
+                </span>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-gray-500 dark:text-gray-400 italic pl-3">No skills added</p>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  const renderCreativeTemplate = () => {
+    if (!resumeData) return null;
+    
+    return (
+      <div className="bg-white dark:bg-gray-800 p-0 rounded-lg shadow-xl max-w-md mx-auto text-left overflow-auto max-h-[70vh] animate-fade-in">
+        <div className="bg-resume-primary p-6 text-white relative">
+          <h1 className="text-2xl font-bold">{resumeData.personal_info.full_name}</h1>
+          <div className="text-sm opacity-90 mt-1 flex flex-wrap gap-2">
+            <span>{resumeData.personal_info.email}</span>
+            <span>•</span>
+            <span>{resumeData.personal_info.phone}</span>
+            <span>•</span>
+            <span>{resumeData.personal_info.location}</span>
+          </div>
+          {resumeData.personal_info.summary && (
+            <p className="mt-4 text-sm leading-relaxed opacity-95">{resumeData.personal_info.summary}</p>
+          )}
+          <div className="absolute -bottom-3 left-1/2 transform -translate-x-1/2 w-10 h-10 bg-white dark:bg-gray-800 rounded-full flex items-center justify-center">
+            <div className="w-8 h-8 bg-resume-primary rounded-full"></div>
+          </div>
+        </div>
+        
+        <div className="p-6">
+          <div className="mb-6 mt-4">
+            <h2 className="text-lg font-semibold text-resume-primary mb-3 flex items-center">
+              <Eye className="w-5 h-5 mr-2" /> Experience
+            </h2>
+            {resumeData.experience.length > 0 ? resumeData.experience.map((exp, index) => (
+              <div key={exp.id || index} className="mb-4 border-l-2 border-resume-primary/30 pl-4 py-1">
+                <div>
+                  <h3 className="font-semibold text-gray-900 dark:text-white">{exp.position}</h3>
+                  <div className="flex justify-between">
+                    <p className="text-sm text-resume-primary">{exp.company}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      {formatDate(exp.start_date, 'short')} - 
+                      {exp.current ? ' Present' : exp.end_date ? ` ${formatDate(exp.end_date, 'short')}` : ''}
+                    </p>
+                  </div>
+                  <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">{exp.description}</p>
+                </div>
+              </div>
+            )) : (
+              <p className="text-sm text-gray-500 dark:text-gray-400 italic">No experience added</p>
+            )}
+          </div>
+          
+          <div className="mb-6">
+            <h2 className="text-lg font-semibold text-resume-primary mb-3 flex items-center">
+              <Eye className="w-5 h-5 mr-2" /> Education
+            </h2>
+            {resumeData.education.length > 0 ? resumeData.education.map((edu, index) => (
+              <div key={edu.id || index} className="mb-3 border-l-2 border-resume-primary/30 pl-4 py-1">
+                <h3 className="font-semibold text-gray-900 dark:text-white">{edu.institution}</h3>
+                <div className="flex justify-between">
+                  <p className="text-sm text-gray-600 dark:text-gray-300">{edu.degree}, {edu.field}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    {formatDate(edu.start_date, 'short')} - 
+                    {edu.current ? ' Present' : edu.end_date ? ` ${formatDate(edu.end_date, 'short')}` : ''}
+                  </p>
+                </div>
+              </div>
+            )) : (
+              <p className="text-sm text-gray-500 dark:text-gray-400 italic">No education added</p>
+            )}
+          </div>
+          
+          <div>
+            <h2 className="text-lg font-semibold text-resume-primary mb-3 flex items-center">
+              <Eye className="w-5 h-5 mr-2" /> Skills
+            </h2>
+            {resumeData.skills.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {resumeData.skills.map((skill, index) => (
+                  <span 
+                    key={index} 
+                    className="text-xs border-2 border-resume-primary/40 text-resume-primary px-3 py-1 rounded-full"
+                  >
+                    {skill}
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-gray-500 dark:text-gray-400 italic">No skills added</p>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderResumeByTemplateId = () => {
+    if (!resumeData) return null;
+    
+    switch (resumeData.template_id) {
+      case 1:
+      case 5:
+        return renderModernTemplate();
+      case 2:
+      case 8:
+        return renderProfessionalTemplate();
+      case 3:
+      case 6:
+        return renderMinimalistTemplate();
+      case 4:
+      case 7:
+        return renderCreativeTemplate();
+      default:
+        return renderModernTemplate();
+    }
+  };
+
+  const renderResumePreview = () => {
+    if (loading) {
+      return (
+        <div className="flex flex-col items-center justify-center h-full">
+          <Skeleton className="h-80 w-full max-w-md" />
+          <Skeleton className="h-10 w-40 mt-4" />
+        </div>
+      );
+    }
+
+    if (!resumeData) {
+      return (
+        <div className="text-center p-8">
+          <p className="text-muted-foreground">No resume data available.</p>
+          <Button 
+            onClick={() => navigate('/builder')} 
+            className="mt-4"
+          >
+            Create Resume
+          </Button>
+        </div>
+      );
+    }
+
+    return renderResumeByTemplateId();
   };
   
   return (

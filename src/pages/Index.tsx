@@ -25,6 +25,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { formatDate } from "@/lib/utils";
 
 interface Resume {
   id: string;
@@ -40,6 +41,7 @@ const Index = () => {
   const [loading, setLoading] = useState(true);
   const [resumes, setResumes] = useState<Resume[]>([]);
   const [deleteResumeId, setDeleteResumeId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   
   useEffect(() => {
     if (user) {
@@ -79,6 +81,7 @@ const Index = () => {
     if (!deleteResumeId) return;
     
     try {
+      setIsDeleting(true);
       const { error } = await supabase
         .from('resumes')
         .delete()
@@ -103,6 +106,7 @@ const Index = () => {
     } catch (err) {
       console.error('Error:', err);
     } finally {
+      setIsDeleting(false);
       setDeleteResumeId(null);
     }
   };
@@ -279,12 +283,13 @@ const Index = () => {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
             <AlertDialogAction 
               onClick={handleDeleteResume}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={isDeleting}
             >
-              Delete
+              {isDeleting ? "Deleting..." : "Delete"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

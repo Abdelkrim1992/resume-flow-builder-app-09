@@ -27,9 +27,9 @@ const ResumeTemplateCard: React.FC<ResumeTemplateCardProps> = ({ template, compa
     switch (layout) {
       case "modern":
         return (
-          <div className="w-full h-full flex flex-col" style={{ backgroundColor: color }}>
+          <div className="w-full h-full flex flex-col overflow-hidden" style={{ backgroundColor: color }}>
             <div className="bg-white dark:bg-gray-800 p-2 w-1/3 h-full">
-              <div className="h-8 w-8 rounded-full bg-gray-300 dark:bg-gray-600 mb-2"></div>
+              <div className="h-8 w-8 rounded-full bg-gray-300 dark:bg-gray-600 mb-2 flex items-center justify-center text-xs font-bold">JD</div>
               <div className="h-2 w-16 bg-gray-300 dark:bg-gray-600 mb-1"></div>
               <div className="h-2 w-12 bg-gray-300 dark:bg-gray-600 mb-2"></div>
               <div className="h-2 w-14 bg-gray-300 dark:bg-gray-600 mb-1"></div>
@@ -51,57 +51,76 @@ const ResumeTemplateCard: React.FC<ResumeTemplateCardProps> = ({ template, compa
         );
       case "creative":
         return (
-          <div className="w-full h-full flex flex-col">
-            <div className="h-1/4 w-full" style={{ backgroundColor: color }}>
+          <div className="w-full h-full flex flex-col overflow-hidden">
+            <div className="h-1/4 w-full relative" style={{ backgroundColor: color }}>
               <div className="flex items-center justify-between p-2">
                 <div>
                   <div className="h-4 w-24 bg-white mb-1"></div>
                   <div className="h-2 w-16 bg-white/80 mb-1"></div>
                 </div>
-                <div className="h-8 w-8 rounded-full bg-white"></div>
+                <div className="h-8 w-8 rounded-full bg-white flex items-center justify-center text-xs font-bold text-gray-800">JD</div>
               </div>
+              <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-4 h-4 bg-white rounded-full"></div>
             </div>
             <div className="flex-1 p-2 bg-white dark:bg-gray-800">
-              <div className="h-3 w-20 bg-gray-400 dark:bg-gray-500 mb-2"></div>
-              <div className="h-2 w-full bg-gray-300 dark:bg-gray-600 mb-1"></div>
-              <div className="h-2 w-full bg-gray-300 dark:bg-gray-600 mb-1"></div>
-              <div className="h-3 w-20 bg-gray-400 dark:bg-gray-500 mb-2 mt-2"></div>
-              <div className="h-2 w-full bg-gray-300 dark:bg-gray-600 mb-1"></div>
-              <div className="h-2 w-full bg-gray-300 dark:bg-gray-600 mb-1"></div>
-              <div className="flex mt-2 justify-between">
-                <div className="h-8 w-8 rounded-full" style={{ backgroundColor: color }}></div>
-                <div className="h-8 w-8 rounded-full" style={{ backgroundColor: color }}></div>
-                <div className="h-8 w-8 rounded-full" style={{ backgroundColor: color }}></div>
+              <div className="flex items-center mb-2">
+                <div className="w-1 h-3" style={{ backgroundColor: color }}></div>
+                <div className="h-3 w-20 bg-gray-400 dark:bg-gray-500 ml-1"></div>
+              </div>
+              <div className="border-l-2 pl-2 mb-2" style={{ borderColor: `${color}40` }}>
+                <div className="h-2 w-full bg-gray-300 dark:bg-gray-600 mb-1"></div>
+                <div className="h-2 w-full bg-gray-300 dark:bg-gray-600 mb-1"></div>
+                <div className="h-2 w-3/4 bg-gray-300 dark:bg-gray-600"></div>
+              </div>
+              
+              <div className="flex items-center mb-2 mt-3">
+                <div className="w-1 h-3" style={{ backgroundColor: color }}></div>
+                <div className="h-3 w-20 bg-gray-400 dark:bg-gray-500 ml-1"></div>
+              </div>
+              <div className="border-l-2 pl-2" style={{ borderColor: `${color}40` }}>
+                <div className="h-2 w-full bg-gray-300 dark:bg-gray-600 mb-1"></div>
+                <div className="h-2 w-full bg-gray-300 dark:bg-gray-600"></div>
+              </div>
+              
+              <div className="flex mt-3 justify-between">
+                <div className="h-5 w-12 rounded-full" style={{ backgroundColor: `${color}40` }}></div>
+                <div className="h-5 w-12 rounded-full" style={{ backgroundColor: `${color}40` }}></div>
+                <div className="h-5 w-12 rounded-full" style={{ backgroundColor: `${color}40` }}></div>
               </div>
             </div>
           </div>
         );
       case "professional":
         return (
-          <div className="w-full h-full flex flex-col">
-            <div className="p-2 border-b-2 flex justify-between items-center" style={{ borderColor: color }}>
+          <div className="w-full h-full flex flex-col overflow-hidden">
+            <div className="p-2 border-b-2 flex justify-between items-start" style={{ borderColor: color }}>
               <div>
-                <div className="h-4 w-24 bg-gray-400 dark:bg-gray-500 mb-1"></div>
+                <div className="h-4 w-24 font-bold text-xs" style={{ color }}>John Doe</div>
                 <div className="h-2 w-16 bg-gray-300 dark:bg-gray-600"></div>
               </div>
-              <div className="flex space-x-1">
-                <div className="h-2 w-6 bg-gray-300 dark:bg-gray-600"></div>
-                <div className="h-2 w-6 bg-gray-300 dark:bg-gray-600"></div>
-                <div className="h-2 w-6 bg-gray-300 dark:bg-gray-600"></div>
+              <div className="flex flex-col items-end">
+                <div className="h-2 w-20 bg-gray-300 dark:bg-gray-600 mb-1"></div>
+                <div className="h-2 w-16 bg-gray-300 dark:bg-gray-600"></div>
               </div>
             </div>
             <div className="flex-1 p-2 bg-white dark:bg-gray-800">
-              <div className="h-3 w-full" style={{ backgroundColor: color, opacity: 0.2 }}></div>
-              <div className="h-3 w-20" style={{ backgroundColor: color, marginTop: -3 }}></div>
-              <div className="mt-2">
+              <div className="flex items-center mb-2">
+                <div className="w-1 h-4" style={{ backgroundColor: color }}></div>
+                <div className="h-3 w-full ml-2" style={{ backgroundColor: `${color}20` }}></div>
+                <div className="h-3 w-24 absolute ml-2" style={{ backgroundColor: color }}></div>
+              </div>
+              <div className="mt-2 border-l border-gray-300 dark:border-gray-600 pl-3">
                 <div className="h-2 w-full bg-gray-300 dark:bg-gray-600 mb-1"></div>
                 <div className="h-2 w-full bg-gray-300 dark:bg-gray-600 mb-1"></div>
                 <div className="h-2 w-3/4 bg-gray-300 dark:bg-gray-600 mb-2"></div>
               </div>
-              <div className="mt-2">
-                <div className="h-3 w-full" style={{ backgroundColor: color, opacity: 0.2 }}></div>
-                <div className="h-3 w-20" style={{ backgroundColor: color, marginTop: -3 }}></div>
-                <div className="h-2 w-full bg-gray-300 dark:bg-gray-600 mt-1 mb-1"></div>
+              <div className="flex items-center mb-2 mt-3">
+                <div className="w-1 h-4" style={{ backgroundColor: color }}></div>
+                <div className="h-3 w-full ml-2" style={{ backgroundColor: `${color}20` }}></div>
+                <div className="h-3 w-24 absolute ml-2" style={{ backgroundColor: color }}></div>
+              </div>
+              <div className="border-l border-gray-300 dark:border-gray-600 pl-3">
+                <div className="h-2 w-full bg-gray-300 dark:bg-gray-600 mb-1"></div>
                 <div className="h-2 w-full bg-gray-300 dark:bg-gray-600 mb-1"></div>
               </div>
             </div>
@@ -109,10 +128,10 @@ const ResumeTemplateCard: React.FC<ResumeTemplateCardProps> = ({ template, compa
         );
       case "simple":
         return (
-          <div className="w-full h-full flex flex-col">
+          <div className="w-full h-full flex flex-col overflow-hidden">
             <div className="p-2 bg-white dark:bg-gray-800 text-center">
-              <div className="h-4 w-32 bg-gray-400 dark:bg-gray-500 mb-1 mx-auto"></div>
-              <div className="h-2 w-24 bg-gray-300 dark:bg-gray-600 mb-2 mx-auto"></div>
+              <div className="h-4 w-32 bg-gray-800 dark:bg-gray-300 mb-1 mx-auto uppercase text-xs font-bold flex items-center justify-center">JOHN DOE</div>
+              <div className="h-2 w-24 bg-gray-400 dark:bg-gray-500 mb-2 mx-auto"></div>
               <div className="flex justify-center space-x-2 mt-1">
                 <div className="h-2 w-6 bg-gray-300 dark:bg-gray-600"></div>
                 <div className="h-2 w-10 bg-gray-300 dark:bg-gray-600"></div>
@@ -120,11 +139,11 @@ const ResumeTemplateCard: React.FC<ResumeTemplateCardProps> = ({ template, compa
               </div>
             </div>
             <div className="flex-1 p-2 bg-white dark:bg-gray-800 border-t-2" style={{ borderColor: color }}>
-              <div className="h-3 w-20 font-bold mb-1" style={{ backgroundColor: color }}></div>
+              <div className="h-3 w-20 font-bold mb-1 uppercase text-xs" style={{ color }}>EXPERIENCE</div>
               <div className="h-2 w-full bg-gray-300 dark:bg-gray-600 mb-1"></div>
               <div className="h-2 w-full bg-gray-300 dark:bg-gray-600 mb-1"></div>
               <div className="h-2 w-3/4 bg-gray-300 dark:bg-gray-600 mb-2"></div>
-              <div className="h-3 w-20 font-bold mb-1" style={{ backgroundColor: color }}></div>
+              <div className="h-3 w-20 font-bold mb-1 uppercase text-xs mt-3" style={{ color }}>EDUCATION</div>
               <div className="h-2 w-full bg-gray-300 dark:bg-gray-600 mb-1"></div>
               <div className="h-2 w-full bg-gray-300 dark:bg-gray-600 mb-1"></div>
             </div>
@@ -132,23 +151,23 @@ const ResumeTemplateCard: React.FC<ResumeTemplateCardProps> = ({ template, compa
         );
       default: // standard layout
         return (
-          <div className="w-full h-full flex">
+          <div className="w-full h-full flex overflow-hidden">
             <div className="w-1/3 h-full p-2" style={{ backgroundColor: color }}>
-              <div className="h-6 w-6 bg-white/80 rounded-full mb-2 mx-auto"></div>
+              <div className="h-8 w-8 bg-white/80 rounded-full mb-2 mx-auto flex items-center justify-center text-xs font-bold">JD</div>
               <div className="h-2 w-full bg-white/80 mb-1"></div>
               <div className="h-2 w-full bg-white/80 mb-3"></div>
-              <div className="h-3 w-12 bg-white mb-1"></div>
+              <div className="h-3 w-12 bg-white mb-1 uppercase text-xs font-bold">SKILLS</div>
               <div className="h-2 w-full bg-white/80 mb-1"></div>
               <div className="h-2 w-full bg-white/80 mb-1"></div>
-              <div className="h-3 w-12 bg-white mt-2 mb-1"></div>
+              <div className="h-3 w-12 bg-white mt-2 mb-1 uppercase text-xs font-bold">INFO</div>
               <div className="h-2 w-full bg-white/80 mb-1"></div>
             </div>
             <div className="w-2/3 h-full p-2 bg-white dark:bg-gray-800">
-              <div className="h-3 w-20 bg-gray-400 dark:bg-gray-500 mb-1"></div>
+              <div className="h-3 w-20 bg-gray-800 dark:bg-gray-300 mb-1 uppercase text-xs font-bold">EXPERIENCE</div>
               <div className="h-2 w-full bg-gray-300 dark:bg-gray-600 mb-1"></div>
               <div className="h-2 w-full bg-gray-300 dark:bg-gray-600 mb-1"></div>
               <div className="h-2 w-4/5 bg-gray-300 dark:bg-gray-600 mb-2"></div>
-              <div className="h-3 w-20 bg-gray-400 dark:bg-gray-500 mb-1"></div>
+              <div className="h-3 w-20 bg-gray-800 dark:bg-gray-300 mb-1 mt-3 uppercase text-xs font-bold">EDUCATION</div>
               <div className="h-2 w-full bg-gray-300 dark:bg-gray-600 mb-1"></div>
               <div className="h-2 w-full bg-gray-300 dark:bg-gray-600 mb-1"></div>
             </div>
@@ -159,7 +178,7 @@ const ResumeTemplateCard: React.FC<ResumeTemplateCardProps> = ({ template, compa
 
   return (
     <div className={`border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden transition-all hover:shadow-md ${compact ? '' : 'hover:scale-105'}`}>
-      <div className={`${compact ? 'aspect-[2/3]' : 'aspect-[3/4]'} bg-gray-50 dark:bg-gray-800 flex items-center justify-center overflow-hidden`}>
+      <div className={`${compact ? 'aspect-[2/3]' : 'aspect-[3/4]'} bg-gray-50 dark:bg-gray-900 flex items-center justify-center overflow-hidden`}>
         {renderTemplatePreview()}
       </div>
       <div className={`p-3 ${compact ? 'pb-4' : ''}`}>
@@ -171,7 +190,7 @@ const ResumeTemplateCard: React.FC<ResumeTemplateCardProps> = ({ template, compa
         {!compact && (
           <div className="mt-3 flex justify-center">
             <Link to={`/builder?template=${id}`}>
-              <Button size="sm" className="w-full">Use this template</Button>
+              <Button size="sm" className="w-full bg-resume-primary hover:bg-resume-primary/90 text-white">Use this template</Button>
             </Link>
           </div>
         )}
